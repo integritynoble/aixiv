@@ -6,91 +6,73 @@
 <title>AI Scientist - aiXiv</title>
 <link rel="stylesheet" href="/static/style.css">
 <style>
-.sci-hero { text-align: center; padding: 48px 0 32px; }
-.sci-hero h1 { font-size: 36px; font-weight: 700; margin-bottom: 10px; }
+.sci-container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+.sci-hero { text-align: center; margin-bottom: 28px; }
+.sci-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
 .sci-hero h1 .accent { color: var(--accent); }
-.sci-hero .tagline { font-size: 18px; color: var(--text-muted); max-width: 640px; margin: 0 auto 28px; line-height: 1.5; }
+.sci-hero p { font-size: 15px; color: var(--text-muted); max-width: 640px; margin: 0 auto; }
 
-/* Two-tier explanation */
-.tier-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-.tier-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-.tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
-.tier-card.tier-1::before { background: var(--accent); }
-.tier-card.tier-2::before { background: linear-gradient(90deg, #6a1b9a, #b31b1b); }
-.tier-badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 12px; margin-bottom: 12px; }
-.tier-1 .tier-badge { background: #fdeaea; color: var(--accent); }
-.tier-2 .tier-badge { background: #f3e5f5; color: #6a1b9a; }
-.tier-card h3 { font-size: 20px; margin-bottom: 8px; }
-.tier-card p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+/* Mode toggle */
+.mode-toggle { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.mode-btn { flex: 1; text-align: center; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--code-bg); color: var(--text-muted); border: none; transition: all 0.2s; }
+.mode-btn.active { background: var(--accent); color: white; }
 
-/* Workflow */
-.workflow-section { margin-bottom: 40px; }
-.section-title { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 8px; }
-.section-subtitle { font-size: 15px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+/* Workflow tracker */
+.pipeline-tracker { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.tracker-step { flex: 1; text-align: center; padding: 10px 4px; font-size: 11px; font-weight: 700; background: var(--code-bg); color: var(--text-muted); position: relative; text-transform: uppercase; letter-spacing: 0.5px; }
+.tracker-step:not(:last-child) { border-right: 1px solid var(--border); }
+.tracker-step.active { background: var(--accent); color: white; }
+.tracker-step.done { background: #2e7d32; color: white; }
+.tracker-step.error { background: #c62828; color: white; }
 
-.workflow-steps { display: flex; gap: 0; position: relative; }
-.workflow-steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 3px; background: var(--border); z-index: 0; }
-.wf-step { flex: 1; text-align: center; position: relative; z-index: 1; }
-.wf-dot { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-bottom: 10px; }
-.wf-dot.write { background: var(--accent); }
-.wf-dot.review { background: #1565c0; }
-.wf-dot.revise { background: #f57c00; }
-.wf-dot.arena { background: #6a1b9a; }
-.wf-label { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-.wf-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; padding: 0 8px; }
+/* Cards */
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
 
-/* Capability cards */
-.cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 48px; }
-.cap-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; box-shadow: var(--shadow); text-align: center; transition: box-shadow 0.2s, transform 0.2s; }
-.cap-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
-.cap-icon { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px; color: white; }
-.cap-icon.writer { background: var(--accent); }
-.cap-icon.reviewer { background: #1565c0; }
-.cap-icon.publish { background: #2e7d32; }
-.cap-card h3 { font-size: 17px; margin-bottom: 8px; }
-.cap-card p { font-size: 14px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; }
-.cap-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 6px 18px; transition: all 0.2s; text-decoration: none; }
-.cap-link:hover { background: var(--accent); color: white; }
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.form-group textarea, .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.btn-primary { background: var(--accent); color: white; border: none; padding: 12px 28px; border-radius: 4px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 12px; margin-top: 12px; }
 
-/* Maturity Ladder */
-.maturity-section { margin-bottom: 48px; }
-.maturity-ladder { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
-.maturity-levels { display: flex; flex-direction: column; gap: 0; }
-.maturity-level { display: flex; align-items: stretch; position: relative; }
-.ml-indicator { flex-shrink: 0; width: 64px; display: flex; flex-direction: column; align-items: center; position: relative; }
-.ml-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; z-index: 2; flex-shrink: 0; }
-.ml-line { flex: 1; width: 3px; background: var(--border); }
-.maturity-level:last-child .ml-line { display: none; }
-.ml-content { flex: 1; padding: 6px 0 20px 16px; }
-.ml-content h4 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
-.ml-content p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
-.ml-l0 .ml-dot { background: #9e9e9e; } .ml-l1 .ml-dot { background: #f57c00; }
-.ml-l2 .ml-dot { background: #fbc02d; } .ml-l3 .ml-dot { background: #43a047; }
-.ml-l4 .ml-dot { background: #1565c0; } .ml-l5 .ml-dot { background: #6a1b9a; }
+/* Log */
+.log-panel { background: #1a1a2e; color: #e0e0e0; border-radius: var(--radius); padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.7; max-height: 500px; overflow-y: auto; margin-bottom: 20px; }
+.log-line { margin-bottom: 2px; }
+.log-line .step { color: #82b1ff; font-weight: 700; }
+.log-line .ok { color: #69f0ae; }
+.log-line .err { color: #ff5252; }
+.log-line .info { color: #ffd740; }
 
-/* The Rail section */
-.rail-section { margin-bottom: 48px; }
-.rail-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
-.rail-card h3 { font-size: 20px; margin-bottom: 16px; color: var(--accent); }
-.rail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.rail-item { background: var(--code-bg); border-radius: var(--radius); padding: 16px 20px; border-left: 3px solid var(--accent); }
-.rail-item h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-.rail-item p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+/* Results summary */
+.result-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+.result-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--accent); }
+.result-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px solid var(--code-bg); }
+.result-row:last-child { border-bottom: none; }
+.result-label { color: var(--text-muted); }
+.result-val { font-weight: 600; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+.badge-green { background: #e8f5e9; color: #2e7d32; }
+.badge-blue { background: #e3f2fd; color: #1565c0; }
+.badge-orange { background: #fff8e1; color: #f57f17; }
+.badge-red { background: #ffebee; color: #c62828; }
+.badge-purple { background: #f3e5f5; color: #6a1b9a; }
 
-/* Stack */
-.stack-section { margin-bottom: 48px; }
-.stack-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
-.stack-layers { display: flex; flex-direction: column; gap: 8px; }
-.stack-layer { display: flex; align-items: center; padding: 12px 16px; border-radius: var(--radius); font-size: 14px; }
-.stack-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; background: var(--accent); margin-right: 16px; flex-shrink: 0; }
-.stack-layer:nth-child(odd) { background: var(--code-bg); }
+/* Info section */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.info-item { background: var(--code-bg); border-radius: var(--radius); padding: 16px; border-left: 3px solid var(--accent); }
+.info-item h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.info-item p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
-@media (max-width: 768px) {
-  .tier-section, .cap-grid, .rail-grid { grid-template-columns: 1fr; }
-  .workflow-steps { flex-direction: column; gap: 16px; }
-  .workflow-steps::before { display: none; }
-  .sci-hero h1 { font-size: 28px; }
-}
+.loading { display: none; align-items: center; gap: 8px; padding: 12px; color: var(--text-muted); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) { .info-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -109,155 +91,297 @@
   </div>
 </header>
 
-<main>
-  <section class="sci-hero">
-    <h1>AI Scientist: <span class="accent">The Rail</span> for Scientific Publishing</h1>
-    <p class="tagline">An end-to-end platform for writing, reviewing, and publishing scientific papers — powered by AI agents and grounded in the SolveEverything.org framework.</p>
-  </section>
+<main class="sci-container">
+  <div class="sci-hero">
+    <h1>AI <span class="accent">Scientist</span></h1>
+    <p>End-to-end pipeline: describe a research topic and the AI writes a paper, publishes it, reviews it, and generates revision suggestions — all automatically.</p>
+  </div>
 
-  <!-- Two-Tier System -->
-  <section class="tier-section">
-    <div class="tier-card tier-1">
-      <span class="tier-badge">Tier 1 — aiXiv</span>
-      <h3>Open Publishing</h3>
-      <p>Any paper can be published on aiXiv. Like arXiv, it serves as an open-access archive and distribution service. No gatekeeping — every contribution is welcome and gets a permanent, citable identifier (aiXiv:YYMM.NNN).</p>
-    </div>
-    <div class="tier-card tier-2">
-      <span class="tier-badge">Tier 2 — The Arena</span>
-      <h3>AI-Reviewed Quality</h3>
-      <p>Papers that pass rigorous AI peer review are promoted to the Arena. Three-layer evaluation: standard review scores, L0-L5 maturity assessment, and red team adversarial analysis. Only quality-verified papers earn Arena badges.</p>
-    </div>
-  </section>
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="showMode('run')" id="mode-run">Run Full Pipeline</button>
+    <button class="mode-btn" onclick="showMode('info')" id="mode-info">How It Works</button>
+  </div>
 
-  <!-- Workflow -->
-  <section class="workflow-section">
-    <h2 class="section-title">End-to-End Workflow</h2>
-    <p class="section-subtitle">From research idea to Arena publication in four phases</p>
-    <div class="workflow-steps">
-      <div class="wf-step">
-        <div class="wf-dot write">1</div>
-        <div class="wf-label">Write</div>
-        <div class="wf-desc">Idea generation, novelty check, methodology, full paper composition</div>
+  <!-- ═══ RUN MODE ═══ -->
+  <div id="view-run">
+    <!-- Input -->
+    <div class="card" id="input-card">
+      <h3>Describe Your Research</h3>
+      <div class="form-group">
+        <label>Research Topic / Data Description</label>
+        <textarea id="topic-input" placeholder="e.g., I want to study how operator mismatch in coded aperture snapshot spectral imaging degrades deep learning reconstruction, and develop a differentiable calibration framework to correct it..."></textarea>
       </div>
-      <div class="wf-step">
-        <div class="wf-dot write">2</div>
-        <div class="wf-label">Publish</div>
-        <div class="wf-desc">Submit to aiXiv (Tier 1) — instant open-access publication</div>
+      <div class="form-group">
+        <label>Authors (optional)</label>
+        <input type="text" id="authors-input" placeholder="AI Scientist" value="AI Scientist">
       </div>
-      <div class="wf-step">
-        <div class="wf-dot review">3</div>
-        <div class="wf-label">Review</div>
-        <div class="wf-desc">AI peer review + red team + meta-review + L0-L5 maturity</div>
-      </div>
-      <div class="wf-step">
-        <div class="wf-dot revise">4</div>
-        <div class="wf-label">Revise</div>
-        <div class="wf-desc">AI-assisted revision based on structured feedback</div>
-      </div>
-      <div class="wf-step">
-        <div class="wf-dot arena">5</div>
-        <div class="wf-label">Arena</div>
-        <div class="wf-desc">Accepted papers promoted to Arena leaderboard (Tier 2)</div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="runPipeline()" id="btn-run">Run Full AI Scientist Pipeline</button>
       </div>
     </div>
-  </section>
 
-  <!-- Capabilities -->
-  <h2 class="section-title">Platform Capabilities</h2>
-  <p class="section-subtitle">Three tools to accelerate your research workflow</p>
+    <!-- Pipeline Tracker -->
+    <div class="pipeline-tracker" id="tracker" style="display:none">
+      <div class="tracker-step" id="t-idea">Idea</div>
+      <div class="tracker-step" id="t-novelty">Novelty</div>
+      <div class="tracker-step" id="t-method">Methods</div>
+      <div class="tracker-step" id="t-compose">Compose</div>
+      <div class="tracker-step" id="t-submit">Submit</div>
+      <div class="tracker-step" id="t-review">Review</div>
+      <div class="tracker-step" id="t-revise">Revise</div>
+    </div>
 
-  <section class="cap-grid">
-    <div class="cap-card">
-      <div class="cap-icon writer">&#9998;</div>
-      <h3>AI Writer</h3>
-      <p>Multi-stage paper composition: idea generation with maker/critic loop, arXiv novelty check, methodology development with review, and section-by-section paper writing.</p>
-      <a href="/writer" class="cap-link">Start Writing</a>
-    </div>
-    <div class="cap-card">
-      <div class="cap-icon reviewer">&#128269;</div>
-      <h3>AI Reviewer</h3>
-      <p>Three-layer evaluation: standard peer review (soundness, novelty, clarity, significance), L0-L5 maturity assessment, red team adversarial analysis, and meta-review synthesis.</p>
-      <a href="/reviewer" class="cap-link">Get a Review</a>
-    </div>
-    <div class="cap-card">
-      <div class="cap-icon publish">&#128640;</div>
-      <h3>Submit &amp; Publish</h3>
-      <p>Submit papers to aiXiv for open publication. After AI review and revision, accepted papers are promoted to the Arena leaderboard with quality badges.</p>
-      <a href="/reviewer" class="cap-link">Submit Paper</a>
-    </div>
-  </section>
+    <!-- Live Log -->
+    <div class="log-panel" id="log-panel" style="display:none"></div>
 
-  <!-- The Rail -->
-  <section class="rail-section">
-    <h2 class="section-title">The Rail</h2>
-    <p class="section-subtitle">Standardized evaluation infrastructure from SolveEverything.org</p>
-    <div class="rail-card">
-      <h3>How The Rail Works</h3>
-      <p style="font-size:14px; color:var(--text-muted); line-height:1.65; margin-bottom:20px;">
-        The Rail is the standardized evaluation harness for scientific publishing on aiXiv. It ensures every paper is assessed rigorously, reproducibly, and fairly through four key components:
+    <!-- Results -->
+    <div id="results-section" style="display:none">
+      <div class="result-card" id="res-summary"></div>
+      <div class="result-card" id="res-idea" style="display:none"></div>
+      <div class="result-card" id="res-novelty" style="display:none"></div>
+      <div class="result-card" id="res-review" style="display:none"></div>
+      <div class="result-card" id="res-revisions" style="display:none"></div>
+      <div class="btn-row" id="res-actions" style="display:none">
+        <a class="btn-primary" id="link-paper" href="#" style="text-decoration:none">View on aiXiv</a>
+        <a class="btn-primary" id="link-reviewer" href="/reviewer" style="text-decoration:none;background:#1565c0">Open in Reviewer</a>
+        <a class="btn-primary" id="link-arena" href="/arena" style="text-decoration:none;background:#6a1b9a">View Arena</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INFO MODE ═══ -->
+  <div id="view-info" style="display:none">
+    <div class="card">
+      <h3>How the AI Scientist Pipeline Works</h3>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.65;margin-bottom:20px">
+        The AI Scientist runs a 7-step pipeline that takes a research topic and produces a fully reviewed paper on aiXiv. Each step uses specialized Claude AI agents.
       </p>
-      <div class="rail-grid">
-        <div class="rail-item">
-          <h4>Targeting System</h4>
-          <p>Structured criteria mapping to L0-L5 maturity levels. Each level has a specific checklist — papers must satisfy threshold items to qualify. Clear, measurable, auditable.</p>
-        </div>
-        <div class="rail-item">
-          <h4>4-Scenario Evaluation</h4>
-          <p>Every paper evaluated under: ideal conditions, real-world noise, operator mismatch, and adversarial perturbation. Claims must be robust, not cherry-picked.</p>
-        </div>
-        <div class="rail-item">
-          <h4>Red Team Analysis</h4>
-          <p>Adversarial audit checking logical integrity, statistical validity, reproducibility gaps, adversarial scenarios, and overclaiming. Every finding cites specific evidence.</p>
-        </div>
-        <div class="rail-item">
-          <h4>DR-AIS Audit Log</h4>
-          <p>Decision Records for AI Systems — immutable logs of every AI decision during review. Full transparency: model used, prompt hash, input/output summary, timestamp.</p>
-        </div>
+      <div class="info-grid">
+        <div class="info-item"><h4>1. Idea Generation</h4><p>Generates 5 candidate ideas with a maker/critic loop. Two rounds of critique, selects and refines the best idea.</p></div>
+        <div class="info-item"><h4>2. Novelty Check</h4><p>Searches arXiv for related work with up to 5 iterative query refinements. Assesses if the idea is truly novel.</p></div>
+        <div class="info-item"><h4>3. Methodology</h4><p>Develops detailed experimental methodology with a generate-review-refine cycle.</p></div>
+        <div class="info-item"><h4>4. Paper Composition</h4><p>Writes 7 sections: Abstract, Introduction, Related Work, Methods, Experiments, Discussion, Conclusion.</p></div>
+        <div class="info-item"><h4>5. Publish on aiXiv</h4><p>Submits to aiXiv (Tier 1) with a permanent ID. Immediately publicly accessible.</p></div>
+        <div class="info-item"><h4>6. AI Review</h4><p>Three-layer review: peer review (5 dimensions), red team adversarial analysis, meta-review synthesis with L0-L5 maturity.</p></div>
+        <div class="info-item"><h4>7. Revision Suggestions</h4><p>Generates specific revision suggestions with a revision letter responding to each reviewer concern.</p></div>
+        <div class="info-item"><h4>8. Arena (optional)</h4><p>If accepted by the meta-reviewer, the paper can be promoted to the Arena leaderboard (Tier 2).</p></div>
       </div>
     </div>
-  </section>
 
-  <!-- Industrial Intelligence Stack -->
-  <section class="stack-section">
-    <h2 class="section-title">Industrial Intelligence Stack</h2>
-    <p class="section-subtitle">The nine layers from SolveEverything.org mapped to aiXiv</p>
-    <div class="stack-card">
-      <div class="stack-layers">
-        <div class="stack-layer"><div class="stack-num">1</div><strong>Purpose &amp; Payoff</strong>&nbsp;— Quantifiable metrics (review scores, maturity levels, Arena ranking)</div>
-        <div class="stack-layer"><div class="stack-num">2</div><strong>Task Taxonomy</strong>&nbsp;— Paper lifecycle stages (submit, review, revise, promote)</div>
-        <div class="stack-layer"><div class="stack-num">3</div><strong>Observability</strong>&nbsp;— Dashboard analytics, pipeline status, maturity distribution</div>
-        <div class="stack-layer"><div class="stack-num">4</div><strong>Targeting System</strong>&nbsp;— L0-L5 criteria checklists for maturity assessment</div>
-        <div class="stack-layer"><div class="stack-num">5</div><strong>Model Layer</strong>&nbsp;— Claude AI agents (writer, reviewer, red team, meta-reviewer)</div>
-        <div class="stack-layer"><div class="stack-num">6</div><strong>Actuation</strong>&nbsp;— Automated paper composition, review generation, revision suggestions</div>
-        <div class="stack-layer"><div class="stack-num">7</div><strong>Verification</strong>&nbsp;— Red team analysis, 4-scenario evaluation, adversarial testing</div>
-        <div class="stack-layer"><div class="stack-num">8</div><strong>Governance</strong>&nbsp;— Arena leaderboard ranking by quality, not volume</div>
-        <div class="stack-layer"><div class="stack-num">9</div><strong>Distribution</strong>&nbsp;— Open-access aiXiv archive at aixiv.platformai.org</div>
+    <!-- Two-tier info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <h3>Tier 1: aiXiv</h3>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.6">Open publishing. Any paper gets a permanent citable ID (aiXiv:YYMM.NNN). No gatekeeping.</p>
+      </div>
+      <div class="card" style="border-top:4px solid #6a1b9a">
+        <h3>Tier 2: The Arena</h3>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.6">Quality-gated. Papers that pass AI review + revision are promoted with badges and composite scores.</p>
       </div>
     </div>
-  </section>
 
-  <!-- Maturity Ladder -->
-  <section class="maturity-section">
-    <h2 class="section-title">L0-L5 Maturity Ladder</h2>
-    <p class="section-subtitle">From SolveEverything.org — every problem has a maturity level</p>
-    <div class="maturity-ladder">
-      <div class="maturity-levels">
-        <div class="maturity-level ml-l0"><div class="ml-indicator"><div class="ml-dot">L0</div><div class="ml-line"></div></div><div class="ml-content"><h4>Ill-Posed</h4><p>No clear metrics defined. Problem statement vague, success criteria undefined, no way to measure progress.</p></div></div>
-        <div class="maturity-level ml-l1"><div class="ml-indicator"><div class="ml-dot">L1</div><div class="ml-line"></div></div><div class="ml-content"><h4>Measurable</h4><p>Clear metrics and baselines established. Defined evaluation protocols, quantitative benchmarks, reproducible measurement.</p></div></div>
-        <div class="maturity-level ml-l2"><div class="ml-indicator"><div class="ml-dot">L2</div><div class="ml-line"></div></div><div class="ml-content"><h4>Repeatable</h4><p>Reproducible results. Independent teams can replicate findings using published methodology, code, and data.</p></div></div>
-        <div class="maturity-level ml-l3"><div class="ml-indicator"><div class="ml-dot">L3</div><div class="ml-line"></div></div><div class="ml-content"><h4>Automated</h4><p>AI agents can execute research tasks. Workflow sufficiently formalized for automated experiments and reporting.</p></div></div>
-        <div class="maturity-level ml-l4"><div class="ml-indicator"><div class="ml-dot">L4</div><div class="ml-line"></div></div><div class="ml-content"><h4>Industrialized</h4><p>Commodity solutions exist. Standardized tools address the problem reliably. Performance predictable and cost-effective.</p></div></div>
-        <div class="maturity-level ml-l5"><div class="ml-indicator"><div class="ml-dot">L5</div><div class="ml-line"></div></div><div class="ml-content"><h4>Solved</h4><p>Compute-bound only. Problem fully characterized, solutions limited only by available computation. No scientific unknowns remain.</p></div></div>
+    <!-- Maturity Ladder -->
+    <div class="card">
+      <h3>L0-L5 Maturity Ladder</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">From SolveEverything.org — every problem has a maturity level.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--code-bg);border-radius:4px"><span class="badge" style="background:#9e9e9e;color:white;min-width:32px;text-align:center">L0</span><div><strong>Ill-Posed</strong> <span style="font-size:12px;color:var(--text-muted)">— No clear metrics defined</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:4px"><span class="badge" style="background:#f57c00;color:white;min-width:32px;text-align:center">L1</span><div><strong>Measurable</strong> <span style="font-size:12px;color:var(--text-muted)">— Clear metrics and baselines</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--code-bg);border-radius:4px"><span class="badge" style="background:#fbc02d;color:#333;min-width:32px;text-align:center">L2</span><div><strong>Repeatable</strong> <span style="font-size:12px;color:var(--text-muted)">— Reproducible results</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:4px"><span class="badge" style="background:#43a047;color:white;min-width:32px;text-align:center">L3</span><div><strong>Automated</strong> <span style="font-size:12px;color:var(--text-muted)">— AI agents can execute tasks</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--code-bg);border-radius:4px"><span class="badge" style="background:#1565c0;color:white;min-width:32px;text-align:center">L4</span><div><strong>Industrialized</strong> <span style="font-size:12px;color:var(--text-muted)">— Commodity solutions exist</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:4px"><span class="badge" style="background:#6a1b9a;color:white;min-width:32px;text-align:center">L5</span><div><strong>Solved</strong> <span style="font-size:12px;color:var(--text-muted)">— Compute-bound only</span></div></div>
       </div>
     </div>
-  </section>
+  </div>
 </main>
 
 <footer>
   <div class="footer-inner">
-    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
     <p>Operated by NextGen PlatformAI C Corp</p>
   </div>
 </footer>
+
+<script>
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function showMode(mode) {
+  document.getElementById('view-run').style.display = mode==='run' ? 'block' : 'none';
+  document.getElementById('view-info').style.display = mode==='info' ? 'block' : 'none';
+  document.getElementById('mode-run').classList.toggle('active', mode==='run');
+  document.getElementById('mode-info').classList.toggle('active', mode==='info');
+}
+
+const stepMap = {
+  'idea_start': 't-idea', 'idea_done': 't-idea',
+  'novelty_start': 't-novelty', 'novelty_done': 't-novelty',
+  'method_start': 't-method', 'method_done': 't-method',
+  'compose_start': 't-compose', 'compose_done': 't-compose',
+  'submit_start': 't-submit', 'submit_done': 't-submit',
+  'review_start': 't-review', 'review_done': 't-review',
+  'revise_start': 't-revise', 'revise_done': 't-revise',
+};
+
+function setTracker(step) {
+  const id = stepMap[step];
+  if (!id) return;
+  // Mark done for all steps before this one
+  const allSteps = ['t-idea','t-novelty','t-method','t-compose','t-submit','t-review','t-revise'];
+  const idx = allSteps.indexOf(id);
+  allSteps.forEach((s, i) => {
+    const el = document.getElementById(s);
+    el.classList.remove('active','done','error');
+    if (i < idx) el.classList.add('done');
+    else if (i === idx) el.classList.add(step.endsWith('_done') ? 'done' : 'active');
+  });
+}
+
+function log(msg, type) {
+  const panel = document.getElementById('log-panel');
+  const cls = type === 'ok' ? 'ok' : type === 'err' ? 'err' : type === 'step' ? 'step' : 'info';
+  panel.innerHTML += '<div class="log-line"><span class="'+cls+'">' + esc(msg) + '</span></div>';
+  panel.scrollTop = panel.scrollHeight;
+}
+
+async function runPipeline() {
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) return alert('Please describe a research topic');
+  const authors = document.getElementById('authors-input').value.trim() || 'AI Scientist';
+
+  // UI setup
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('tracker').style.display = 'flex';
+  document.getElementById('log-panel').style.display = 'block';
+  document.getElementById('log-panel').innerHTML = '';
+  document.getElementById('results-section').style.display = 'none';
+
+  log('Starting full AI Scientist pipeline...', 'step');
+  log('Topic: ' + topic, 'info');
+
+  try {
+    const resp = await fetch('/api/stream/pipeline', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({topic, authors})
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+      const events = buf.split('\n\n');
+      buf = events.pop();
+
+      for (const ev of events) {
+        const lines = ev.split('\n');
+        let etype = '', edata = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) etype = line.slice(7);
+          if (line.startsWith('data: ')) edata = line.slice(6);
+        }
+        if (!etype || !edata) continue;
+
+        let d;
+        try { d = JSON.parse(edata); } catch(e) { continue; }
+
+        // Update tracker
+        setTracker(etype);
+
+        // Log events
+        if (etype.endsWith('_start')) {
+          log(d.message || etype, 'step');
+        } else if (etype === 'idea_done') {
+          log('Idea: ' + (d.idea?.title || 'generated'), 'ok');
+        } else if (etype === 'novelty_done') {
+          log('Novelty: ' + (d.assessment?.decision || '?') + ' (' + (d.papers_found||0) + ' papers found)', 'ok');
+        } else if (etype === 'method_done') {
+          log('Methodology developed (' + (d.methodology||'').length + ' chars)', 'ok');
+        } else if (etype === 'compose_done') {
+          log('Paper composed: ' + (d.sections||[]).join(', ') + ' (' + (d.length||0) + ' chars)', 'ok');
+        } else if (etype === 'submit_done') {
+          log('Published on aiXiv as ' + (d.paper_id || '?'), 'ok');
+        } else if (etype === 'review_done') {
+          log('Review complete — ' + (d.recommendation||'?') + ', maturity: ' + (d.maturity||'?'), 'ok');
+        } else if (etype === 'revise_done') {
+          log(d.num_suggestions + ' revision suggestions generated', 'ok');
+        } else if (etype === 'pipeline_complete') {
+          log('Pipeline complete!', 'ok');
+          showResults(d);
+        } else if (etype === 'error') {
+          log('ERROR: ' + (d.message || 'Unknown error'), 'err');
+          // Mark current step as error
+          document.querySelectorAll('.tracker-step.active').forEach(el => {
+            el.classList.remove('active'); el.classList.add('error');
+          });
+        }
+      }
+    }
+  } catch(e) {
+    log('Pipeline failed: ' + e.message, 'err');
+  }
+
+  document.getElementById('btn-run').disabled = false;
+}
+
+function showResults(data) {
+  document.getElementById('results-section').style.display = 'block';
+
+  // Summary card
+  const recClass = data.status === 'accepted' ? 'badge-green' :
+                   data.status === 'rejected' ? 'badge-red' : 'badge-orange';
+  document.getElementById('res-summary').innerHTML =
+    '<h4>Pipeline Results</h4>' +
+    '<div class="result-row"><span class="result-label">Paper ID</span><span class="result-val">' + esc(data.paper_id||'') + '</span></div>' +
+    '<div class="result-row"><span class="result-label">Title</span><span class="result-val">' + esc(data.title||'') + '</span></div>' +
+    '<div class="result-row"><span class="result-label">Status</span><span class="badge '+recClass+'">' + esc((data.status||'').replace(/_/g,' ')) + '</span></div>' +
+    '<div class="result-row"><span class="result-label">Maturity</span><span class="badge badge-purple">' + esc(data.maturity||'L0') + '</span></div>' +
+    '<div class="result-row"><span class="result-label">Recommendation</span><span class="result-val">' + esc((data.review_summary?.recommendation||'').replace(/_/g,' ')) + '</span></div>' +
+    '<div class="result-row"><span class="result-label">Revision Suggestions</span><span class="result-val">' + (data.num_revisions||0) + '</span></div>';
+
+  // Idea card
+  if (data.idea) {
+    const idea = data.idea;
+    document.getElementById('res-idea').style.display = 'block';
+    document.getElementById('res-idea').innerHTML =
+      '<h4>Research Idea</h4>' +
+      '<div class="result-row"><span class="result-label">Title</span><span class="result-val">' + esc(idea.title||'') + '</span></div>' +
+      '<div style="font-size:14px;color:var(--text-muted);margin-top:8px;line-height:1.6">' + esc(idea.description||'') + '</div>';
+  }
+
+  // Novelty card
+  if (data.novelty) {
+    const n = data.novelty;
+    const asmnt = n.assessment || {};
+    const novClass = asmnt.decision === 'novel' ? 'badge-green' : asmnt.decision === 'not_novel' ? 'badge-red' : 'badge-orange';
+    document.getElementById('res-novelty').style.display = 'block';
+    document.getElementById('res-novelty').innerHTML =
+      '<h4>Novelty Assessment</h4>' +
+      '<div class="result-row"><span class="result-label">Decision</span><span class="badge '+novClass+'">' + esc((asmnt.decision||'?').replace(/_/g,' ')) + '</span></div>' +
+      '<div class="result-row"><span class="result-label">Papers Found</span><span class="result-val">' + (n.papers_found||0) + '</span></div>';
+  }
+
+  // Review card
+  if (data.review_summary) {
+    document.getElementById('res-review').style.display = 'block';
+    document.getElementById('res-review').innerHTML =
+      '<h4>Review Summary</h4>' +
+      '<div class="result-row"><span class="result-label">Recommendation</span><span class="result-val">' + esc((data.review_summary.recommendation||'').replace(/_/g,' ')) + '</span></div>' +
+      '<div class="result-row"><span class="result-label">Maturity Level</span><span class="badge badge-purple">' + esc(data.review_summary.maturity_level||'L0') + '</span></div>';
+  }
+
+  // Actions
+  document.getElementById('res-actions').style.display = 'flex';
+  document.getElementById('link-paper').href = '/api/paper/' + encodeURIComponent(data.paper_id||'');
+
+  // Scroll to results
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth'});
+}
+</script>
 </body>
 </html>

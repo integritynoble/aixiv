@@ -6,7 +6,7 @@
 <title>Dashboard - aiXiv</title>
 <link rel="stylesheet" href="/static/style.css">
 <style>
-.dash-container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
+.dash-container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
 .dash-hero { text-align: center; margin-bottom: 32px; }
 .dash-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
 .dash-hero h1 .accent { color: var(--accent); }
@@ -18,8 +18,10 @@
 .stat-val { font-size: 36px; font-weight: 700; color: var(--accent); }
 .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 
-/* Pipeline */
+/* Section title */
 .section-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+
+/* Pipeline */
 .pipeline { display: flex; gap: 0; margin-bottom: 32px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
 .pipe-stage { flex: 1; text-align: center; padding: 16px 8px; background: var(--card-bg); border-right: 1px solid var(--border); position: relative; }
 .pipe-stage:last-child { border-right: none; }
@@ -34,9 +36,15 @@
 .pipe-stage.arena .pipe-count { color: #6a1b9a; }
 .pipe-stage.rejected .pipe-count { color: #c62828; }
 
+/* Two-column layout */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+@media (max-width: 768px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+.card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
 /* Maturity chart */
-.maturity-chart { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 32px; }
-.maturity-bars { display: flex; gap: 12px; align-items: flex-end; height: 160px; padding-top: 16px; }
+.maturity-bars { display: flex; gap: 12px; align-items: flex-end; height: 140px; padding-top: 16px; }
 .mat-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
 .mat-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.3s; min-height: 4px; }
 .mat-bar.l0 { background: #9e9e9e; } .mat-bar.l1 { background: #f57c00; }
@@ -44,6 +52,34 @@
 .mat-bar.l4 { background: #1565c0; } .mat-bar.l5 { background: #6a1b9a; }
 .mat-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
 .mat-count { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+
+/* Review dimensions radar */
+.dim-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.dim-label { width: 100px; text-align: right; color: var(--text-muted); }
+.dim-bar-bg { flex: 1; height: 10px; background: var(--code-bg); border-radius: 5px; overflow: hidden; }
+.dim-bar-fill { height: 100%; border-radius: 5px; background: var(--accent); transition: width 0.3s; }
+.dim-val { width: 32px; font-weight: 700; }
+
+/* Activity feed */
+.activity-feed { max-height: 360px; overflow-y: auto; }
+.activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--code-bg); font-size: 13px; }
+.activity-item:last-child { border-bottom: none; }
+.activity-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; flex-shrink: 0; }
+.activity-icon.paper { background: #757575; }
+.activity-icon.review { background: #1565c0; }
+.activity-icon.redteam { background: #c62828; }
+.activity-body { flex: 1; }
+.activity-title { font-weight: 600; margin-bottom: 2px; }
+.activity-detail { color: var(--text-muted); font-size: 12px; }
+.activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* Health */
+.health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.health-item { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--code-bg); border-radius: 4px; font-size: 13px; }
+.health-key { color: var(--text-muted); }
+.health-val { font-weight: 700; }
+.health-ok { color: #2e7d32; }
+.health-warn { color: #f57f17; }
 
 /* Recent papers table */
 .papers-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
@@ -85,7 +121,7 @@
     <div class="stat-card"><div class="stat-val" id="s-total">0</div><div class="stat-label">Total Papers</div></div>
     <div class="stat-card"><div class="stat-val" id="s-reviews">0</div><div class="stat-label">Reviews</div></div>
     <div class="stat-card"><div class="stat-val" id="s-arena">0</div><div class="stat-label">Arena Papers</div></div>
-    <div class="stat-card"><div class="stat-val" id="s-avg">0</div><div class="stat-label">Arena Avg Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-avg">0</div><div class="stat-label">Avg Review Score</div></div>
   </div>
 
   <!-- Pipeline -->
@@ -99,10 +135,31 @@
     <div class="pipe-stage rejected"><div class="pipe-count" id="p-rejected">0</div><div class="pipe-label">Rejected</div></div>
   </div>
 
-  <!-- Maturity Distribution -->
-  <h3 class="section-title">Maturity Distribution</h3>
-  <div class="maturity-chart">
-    <div class="maturity-bars" id="maturity-bars"></div>
+  <!-- Two-column: Maturity + Review Quality -->
+  <div class="dash-grid">
+    <div class="card">
+      <h3>Maturity Distribution</h3>
+      <div class="maturity-bars" id="maturity-bars"></div>
+    </div>
+    <div class="card">
+      <h3>Review Quality Metrics</h3>
+      <div id="review-dims"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-muted)" id="review-stats-text"></div>
+    </div>
+  </div>
+
+  <!-- Two-column: Activity Feed + System Health -->
+  <div class="dash-grid">
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <div class="activity-feed" id="activity-feed">
+        <div style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">No activity yet</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>System Health</h3>
+      <div class="health-grid" id="health-grid"></div>
+    </div>
   </div>
 
   <!-- Recent Papers -->
@@ -135,7 +192,7 @@ async function loadDashboard() {
     document.getElementById('s-total').textContent = stats.total || 0;
     document.getElementById('s-reviews').textContent = stats.total_reviews || 0;
     document.getElementById('s-arena').textContent = stats.arena_count || 0;
-    document.getElementById('s-avg').textContent = stats.arena_avg_score || 0;
+    document.getElementById('s-avg').textContent = stats.review_score_avg || stats.arena_avg_score || 0;
 
     // Pipeline
     ['submitted','under_review','revision','accepted','published_arena','rejected'].forEach(s => {
@@ -149,9 +206,55 @@ async function loadDashboard() {
     const levels = ['L0','L1','L2','L3','L4','L5'];
     document.getElementById('maturity-bars').innerHTML = levels.map(l => {
       const count = md[l] || 0;
-      const height = Math.max(4, (count / maxVal) * 140);
+      const height = Math.max(4, (count / maxVal) * 120);
       return '<div class="mat-bar-wrap"><div class="mat-count">'+count+'</div><div class="mat-bar '+l.toLowerCase()+'" style="height:'+height+'px"></div><div class="mat-label">'+l+'</div></div>';
     }).join('');
+
+    // Review quality dimensions
+    const dims = stats.review_dimensions || {};
+    const dimNames = ['soundness','novelty','clarity','significance','reproducibility'];
+    if (Object.keys(dims).length) {
+      document.getElementById('review-dims').innerHTML = dimNames.map(d => {
+        const val = dims[d] || 0;
+        const pct = (val / 10) * 100;
+        return '<div class="dim-row"><span class="dim-label">' + d.charAt(0).toUpperCase()+d.slice(1) + '</span>' +
+          '<div class="dim-bar-bg"><div class="dim-bar-fill" style="width:'+pct+'%"></div></div>' +
+          '<span class="dim-val">' + val + '</span></div>';
+      }).join('');
+      document.getElementById('review-stats-text').innerHTML =
+        'Score range: <strong>'+stats.review_score_min+'</strong> - <strong>'+stats.review_score_max+'</strong> | ' +
+        'Average: <strong>'+stats.review_score_avg+'</strong> / 10';
+    } else {
+      document.getElementById('review-dims').innerHTML =
+        '<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">No reviews yet</div>';
+    }
+
+    // Activity feed
+    const activity = stats.recent_activity || [];
+    if (activity.length) {
+      document.getElementById('activity-feed').innerHTML = activity.map(a => {
+        const iconCls = a.type === 'review' ? 'review' : a.type === 'redteam' ? 'redteam' : 'paper';
+        const icon = a.type === 'review' ? 'R' : a.type === 'redteam' ? '!' : 'P';
+        const timeStr = (a.timestamp||'').substring(0,16).replace('T',' ');
+        return '<div class="activity-item">' +
+          '<div class="activity-icon '+iconCls+'">'+icon+'</div>' +
+          '<div class="activity-body"><div class="activity-title">'+esc(a.title||'')+'</div>' +
+          '<div class="activity-detail">'+esc(a.paper_id||'')+' — '+esc(a.detail||'')+'</div></div>' +
+          '<div class="activity-time">'+esc(timeStr)+'</div></div>';
+      }).join('');
+    }
+
+    // System health
+    const health = stats.health || {};
+    const tables = health.tables || {};
+    let hHtml = '<div class="health-item"><span class="health-key">Database</span><span class="health-val health-ok">' +
+      (health.database||'ok').toUpperCase()+'</span></div>';
+    for (const [table, count] of Object.entries(tables)) {
+      const cls = count >= 0 ? 'health-ok' : 'health-warn';
+      hHtml += '<div class="health-item"><span class="health-key">'+esc(table)+'</span>' +
+        '<span class="health-val '+cls+'">'+(count>=0?count+' rows':'ERROR')+'</span></div>';
+    }
+    document.getElementById('health-grid').innerHTML = hHtml;
 
     // Papers table
     document.getElementById('papers-body').innerHTML = papers.slice(0, 20).map(p => {

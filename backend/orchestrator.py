@@ -207,6 +207,124 @@ def promote_to_arena(paper_id):
     return promote_paper(paper_id)
 
 
+def run_full_pipeline(topic, authors="AI Scientist", callback=None):
+    """Run the complete AI Scientist pipeline end-to-end:
+    idea → novelty → method → compose → submit → review → revision suggestions.
+
+    Args:
+        topic: Research topic/description
+        authors: Author names
+        callback: Optional function called with (step_name, step_data) for progress updates
+
+    Returns dict with all intermediate and final results.
+    """
+    def emit(step, data):
+        if callback:
+            callback(step, data)
+
+    results = {"topic": topic, "authors": authors}
+
+    # Phase 1: WRITE
+    # Step 1: Idea generation
+    emit("idea_start", {"message": "Generating research ideas (5 candidates, 2 critique rounds)..."})
+    idea, idea_log = run_idea_pipeline(topic)
+    results["idea"] = idea
+    emit("idea_done", {"idea": idea, "log": idea_log})
+
+    # Step 2: Novelty check
+    idea_text = f"{idea.get('title', '')}: {idea.get('description', '')}"
+    emit("novelty_start", {"message": "Checking novelty against arXiv..."})
+    assessment, papers_found, novelty_log = run_novelty_check(idea_text)
+    results["novelty"] = {"assessment": assessment, "papers_found": len(papers_found),
+                          "top_papers": papers_found[:10]}
+    emit("novelty_done", {"assessment": assessment, "papers_found": len(papers_found)})
+
+    # Step 3: Methodology
+    emit("method_start", {"message": "Developing methodology..."})
+    methodology, method_review, method_log = run_methodology_pipeline(idea, papers_found[:10])
+    results["methodology"] = methodology
+    emit("method_done", {"methodology": methodology[:500]})
+
+    # Step 4: Paper composition
+    emit("compose_start", {"message": "Composing full paper (7 sections)..."})
+    sections, compose_log = compose_full_paper(idea, methodology, papers_found[:10])
+    paper_md = format_paper_markdown(idea.get("title", "Untitled"), authors, sections)
+    results["sections"] = sections
+    results["full_paper"] = paper_md
+    emit("compose_done", {"sections": list(sections.keys()) if isinstance(sections, dict) else [],
+                          "length": len(paper_md)})
+
+    # Phase 2: PUBLISH (Tier 1)
+    emit("submit_start", {"message": "Publishing on aiXiv (Tier 1)..."})
+    conn = get_db()
+    from database import generate_paper_id
+    paper_id = generate_paper_id()
+    now = datetime.utcnow().isoformat()
+
+    abstract_text = ""
+    if isinstance(sections, dict):
+        abstract_text = sections.get("abstract", idea.get("description", ""))
+    elif isinstance(sections, list):
+        for s in sections:
+            if isinstance(s, dict) and s.get("name") == "abstract":
+                abstract_text = s.get("content", "")
+                break
+    if not abstract_text:
+        abstract_text = idea.get("description", "")
+
+    conn.execute("""
+        INSERT INTO papers (paper_id, title, authors, affiliation, abstract,
+                          keywords, categories, full_text, pdf_path, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 'submitted', ?, ?)
+    """, (paper_id, idea.get("title", "Untitled"), authors,
+          "NextGen PlatformAI C Corp", abstract_text,
+          ", ".join(idea.get("keywords", [])) if isinstance(idea.get("keywords"), list) else "",
+          "", paper_md, now, now))
+    conn.commit()
+    conn.close()
+    results["paper_id"] = paper_id
+    emit("submit_done", {"paper_id": paper_id})
+
+    record_decision(paper_id, "full_pipeline_submit", "system", "",
+                    f"Topic: {topic}", f"Paper {paper_id} created from full pipeline")
+
+    # Phase 3: REVIEW
+    emit("review_start", {"message": "Running full AI review (peer + red team + meta)..."})
+    review_results = run_full_review(paper_id)
+    results["review"] = review_results
+    emit("review_done", {
+        "status": review_results.get("new_status", ""),
+        "maturity": review_results.get("maturity_level", "L0"),
+        "recommendation": review_results.get("meta_review", {}).get("final_recommendation", ""),
+    })
+
+    # Phase 4: REVISE (generate suggestions)
+    emit("revise_start", {"message": "Generating revision suggestions..."})
+    peer_raw = review_results.get("peer_review", {})
+    redteam_raw = review_results.get("redteam", {})
+    meta_raw = review_results.get("meta_review", {})
+
+    revision_result, revision_raw = generate_revisions(
+        paper_md[:8000],
+        json.dumps(peer_raw)[:3000] if isinstance(peer_raw, dict) else str(peer_raw)[:3000],
+        json.dumps(redteam_raw)[:3000] if isinstance(redteam_raw, dict) else str(redteam_raw)[:3000],
+        json.dumps(meta_raw)[:2000] if isinstance(meta_raw, dict) else str(meta_raw)[:2000],
+    )
+    results["revisions"] = revision_result
+    emit("revise_done", {
+        "num_suggestions": len(revision_result.get("revision_suggestions", [])),
+    })
+
+    emit("pipeline_complete", {
+        "paper_id": paper_id,
+        "title": idea.get("title", "Untitled"),
+        "status": review_results.get("new_status", ""),
+        "maturity": review_results.get("maturity_level", "L0"),
+    })
+
+    return results
+
+
 def get_pipeline_stats():
     """Get statistics for the dashboard."""
     conn = get_db()
@@ -234,6 +352,85 @@ def get_pipeline_stats():
     # Review stats
     row = conn.execute("SELECT COUNT(*) as c FROM reviews").fetchone()
     stats["total_reviews"] = row["c"]
+
+    # Review quality metrics
+    review_rows = conn.execute(
+        "SELECT overall_score, soundness, novelty, clarity, significance, reproducibility "
+        "FROM reviews WHERE overall_score IS NOT NULL"
+    ).fetchall()
+    if review_rows:
+        scores = [r["overall_score"] for r in review_rows if r["overall_score"]]
+        stats["review_score_avg"] = round(sum(scores) / len(scores), 1) if scores else 0
+        stats["review_score_min"] = min(scores) if scores else 0
+        stats["review_score_max"] = max(scores) if scores else 0
+
+        dims = {}
+        for dim in ["soundness", "novelty", "clarity", "significance", "reproducibility"]:
+            vals = [r[dim] for r in review_rows if r[dim]]
+            dims[dim] = round(sum(vals) / len(vals), 1) if vals else 0
+        stats["review_dimensions"] = dims
+    else:
+        stats["review_score_avg"] = 0
+        stats["review_score_min"] = 0
+        stats["review_score_max"] = 0
+        stats["review_dimensions"] = {}
+
+    # Recent activity (from decision records + reviews + papers)
+    activity = []
+    recent_papers = conn.execute(
+        "SELECT paper_id, title, status, created_at FROM papers ORDER BY created_at DESC LIMIT 10"
+    ).fetchall()
+    for p in recent_papers:
+        activity.append({
+            "type": "paper",
+            "paper_id": p["paper_id"],
+            "title": (p["title"] or "")[:60],
+            "detail": f"Status: {p['status']}",
+            "timestamp": p["created_at"],
+        })
+
+    recent_reviews = conn.execute(
+        "SELECT paper_id, review_layer, overall_score, recommendation, created_at "
+        "FROM reviews ORDER BY created_at DESC LIMIT 10"
+    ).fetchall()
+    for r in recent_reviews:
+        activity.append({
+            "type": "review",
+            "paper_id": r["paper_id"],
+            "title": f"Review ({r['review_layer'] or 'peer'})",
+            "detail": f"Score: {r['overall_score']}, Rec: {r['recommendation'] or '?'}",
+            "timestamp": r["created_at"],
+        })
+
+    recent_redteam = conn.execute(
+        "SELECT paper_id, overall_risk, created_at "
+        "FROM redteam_reports ORDER BY created_at DESC LIMIT 5"
+    ).fetchall()
+    for rt in recent_redteam:
+        activity.append({
+            "type": "redteam",
+            "paper_id": rt["paper_id"],
+            "title": "Red Team Analysis",
+            "detail": f"Risk: {rt['overall_risk']}",
+            "timestamp": rt["created_at"],
+        })
+
+    # Sort by timestamp descending
+    activity.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+    stats["recent_activity"] = activity[:20]
+
+    # System health
+    stats["health"] = {
+        "database": "ok",
+        "tables": {},
+    }
+    for table in ["papers", "reviews", "redteam_reports", "meta_reviews",
+                  "revisions", "eval_results", "writing_sessions", "arena_papers"]:
+        try:
+            row = conn.execute(f"SELECT COUNT(*) as c FROM {table}").fetchone()
+            stats["health"]["tables"][table] = row["c"]
+        except Exception:
+            stats["health"]["tables"][table] = -1
 
     conn.close()
     return stats

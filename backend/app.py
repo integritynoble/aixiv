@@ -886,6 +886,71 @@ async def stream_idea(request: Request):
                               headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+@app.post("/api/stream/pipeline")
+async def stream_full_pipeline(request: Request):
+    """SSE stream for the full AI Scientist pipeline: write → submit → review → revise."""
+    data = await request.json()
+    topic = data.get("topic", "")
+    authors = data.get("authors", "AI Scientist")
+
+    async def generate():
+        if not topic:
+            yield await _sse_event("error", {"message": "topic is required"})
+            return
+
+        import queue
+        import threading
+
+        event_queue = queue.Queue()
+
+        def callback(step, step_data):
+            event_queue.put((step, step_data))
+
+        def run_pipeline():
+            try:
+                from orchestrator import run_full_pipeline
+                result = run_full_pipeline(topic, authors, callback=callback)
+                event_queue.put(("_result", result))
+            except Exception as e:
+                event_queue.put(("_error", {"message": str(e)}))
+
+        thread = threading.Thread(target=run_pipeline, daemon=True)
+        thread.start()
+
+        while True:
+            try:
+                step, data_item = event_queue.get(timeout=300)
+            except queue.Empty:
+                yield await _sse_event("error", {"message": "Pipeline timed out"})
+                return
+
+            if step == "_result":
+                # Serialize final result (trim large fields)
+                final = {
+                    "paper_id": data_item.get("paper_id", ""),
+                    "title": data_item.get("idea", {}).get("title", "Untitled"),
+                    "status": data_item.get("review", {}).get("new_status", ""),
+                    "maturity": data_item.get("review", {}).get("maturity_level", "L0"),
+                    "idea": data_item.get("idea", {}),
+                    "novelty": data_item.get("novelty", {}),
+                    "review_summary": {
+                        "recommendation": data_item.get("review", {}).get("meta_review", {}).get("final_recommendation", ""),
+                        "maturity_level": data_item.get("review", {}).get("maturity_level", "L0"),
+                    },
+                    "num_revisions": len(data_item.get("revisions", {}).get("revision_suggestions", [])),
+                }
+                yield await _sse_event("pipeline_complete", final)
+                return
+            elif step == "_error":
+                yield await _sse_event("error", data_item)
+                return
+            else:
+                yield await _sse_event(step, data_item)
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 # ═══════════════════════════════════════════════════════════════════
 # API: Author Response to Review
 # ═══════════════════════════════════════════════════════════════════
