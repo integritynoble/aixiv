@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Submit a Paper - aiXiv</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.submit-form { max-width: 700px; margin: 0 auto; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.form-group .hint { font-size: 12px; color: #777; margin-bottom: 4px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px;
+  font-size: 14px; font-family: inherit; box-sizing: border-box;
+}
+.form-group textarea { min-height: 120px; resize: vertical; }
+.btn-submit {
+  background: #b31b1b; color: white; border: none; padding: 12px 32px;
+  border-radius: 4px; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-submit:hover { opacity: 0.9; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.success-box {
+  display: none; background: #e8f5e9; border: 1px solid #a5d6a7;
+  border-radius: 4px; padding: 20px; margin-top: 20px; text-align: center;
+}
+.success-box h3 { color: #2e7d32; margin-bottom: 8px; }
+.success-box .paper-id { font-size: 24px; font-weight: 700; color: #b31b1b; margin: 12px 0; }
+.error-box {
+  display: none; background: #ffebee; border: 1px solid #ef9a9a;
+  border-radius: 4px; padding: 12px; margin-top: 12px; color: #c62828; font-size: 14px;
+}
+.two-tier-info {
+  background: #f5f5f5; border-radius: 4px; padding: 16px 20px;
+  margin-bottom: 24px; font-size: 14px; line-height: 1.6;
+}
+.two-tier-info strong { color: #b31b1b; }
+</style>
 </head>
 <body>
 <header>
@@ -12,8 +45,13 @@
     <a href="index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
     <nav>
       <a href="index.html">Papers</a>
+      <a href="/scientist">AI Scientist</a>
+      <a href="/writer">Writer</a>
+      <a href="/reviewer">Reviewer</a>
+      <a href="/arena">Arena</a>
+      <a href="/dashboard">Dashboard</a>
       <a href="about.html">About</a>
-      <a href="submit.html">Submit</a>
+      <a href="submit.html" class="active">Submit</a>
     </nav>
   </div>
 </header>
@@ -21,32 +59,85 @@
   <div class="page-content">
     <h1>Submit a Paper</h1>
 
-    <h2>How to Submit</h2>
-    <p>To submit a paper to aiXiv, please send your manuscript and supporting materials via email to <strong><a href="mailto:integrityyang@gmail.com">integrityyang@gmail.com</a></strong>. Our editorial team will review your submission and respond with a paper ID and publication timeline.</p>
+    <div class="two-tier-info">
+      <strong>Two-Tier Publishing:</strong> Your paper is published immediately on aiXiv (Tier 1) with a permanent citable ID.
+      After submission, you can request an <a href="/reviewer" style="color:#b31b1b">AI Review</a> to get structured feedback.
+      Papers that pass review can be promoted to the <a href="/arena" style="color:#b31b1b">Arena</a> (Tier 2) leaderboard.
+    </div>
 
-    <h2>Submission Requirements</h2>
-    <p>All submissions must include the following:</p>
-    <ul>
-      <li><strong>Manuscript in PDF format</strong> -- Your paper must be submitted as a single PDF file. We recommend using LaTeX with a standard academic template for optimal formatting.</li>
-      <li><strong>Abstract</strong> -- A concise summary of your work (typically 150-300 words) describing the problem, approach, key results, and significance.</li>
-      <li><strong>Keywords</strong> -- A list of 3-7 keywords that characterize the subject matter of your paper, enabling accurate categorization and discoverability.</li>
-      <li><strong>Author information</strong> -- Full names, affiliations, and contact email addresses for all authors.</li>
-    </ul>
+    <div class="submit-form">
+      <form id="submit-form" onsubmit="submitPaper(event)">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="s-title" required placeholder="Full title of your paper">
+        </div>
+
+        <div class="form-group">
+          <label>Authors *</label>
+          <div class="hint">Comma-separated list of author names</div>
+          <input type="text" id="s-authors" required placeholder="e.g., Alice Smith, Bob Jones">
+        </div>
+
+        <div class="form-group">
+          <label>Affiliation</label>
+          <input type="text" id="s-affiliation" placeholder="e.g., MIT, Stanford University">
+        </div>
+
+        <div class="form-group">
+          <label>Abstract *</label>
+          <div class="hint">150-300 words summarizing the problem, approach, key results, and significance</div>
+          <textarea id="s-abstract" required placeholder="Paper abstract..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Full Text</label>
+          <div class="hint">Optional but recommended for thorough AI review. Paste the full paper text.</div>
+          <textarea id="s-fulltext" style="min-height:200px" placeholder="Paste full paper text here (optional)"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Keywords</label>
+          <div class="hint">Comma-separated keywords for discoverability</div>
+          <input type="text" id="s-keywords" placeholder="e.g., computational imaging, operator mismatch, CASSI">
+        </div>
+
+        <div class="form-group">
+          <label>Categories</label>
+          <div class="hint">Select one or more categories</div>
+          <input type="text" id="s-categories" placeholder="e.g., physics.comp-img, cs.CV, cs.AI, physics.optics">
+        </div>
+
+        <div class="form-group">
+          <label>PDF File</label>
+          <div class="hint">Upload your paper as PDF (optional)</div>
+          <input type="file" id="s-pdf" accept=".pdf">
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit">Submit to aiXiv</button>
+      </form>
+
+      <div class="error-box" id="error-box"></div>
+
+      <div class="success-box" id="success-box">
+        <h3>Paper Published on aiXiv!</h3>
+        <div class="paper-id" id="result-id"></div>
+        <p id="result-msg"></p>
+        <p style="margin-top:16px">
+          <a href="/reviewer" style="color:#b31b1b; font-weight:600">Request AI Review &rarr;</a>
+        </p>
+      </div>
+    </div>
 
     <h2>Available Categories</h2>
-    <p>When submitting, please select one or more categories that best describe your work:</p>
     <ul>
-      <li><strong>physics.comp-img</strong> -- Computational Imaging: forward models, reconstruction algorithms, operator calibration, imaging system design, and inverse problems across physical modalities.</li>
-      <li><strong>physics.optics</strong> -- Physics of Optics: optical systems, spectral imaging, coded aperture methods, diffractive optics, and photonic devices.</li>
-      <li><strong>cs.CV</strong> -- Computer Vision: image reconstruction, visual computing, scene understanding, and image processing methods.</li>
-      <li><strong>cs.AI</strong> -- Artificial Intelligence: machine learning, deep learning, neural networks, and AI methods applied to scientific problems.</li>
+      <li><strong>physics.comp-img</strong> -- Computational Imaging</li>
+      <li><strong>physics.optics</strong> -- Physics of Optics</li>
+      <li><strong>cs.CV</strong> -- Computer Vision</li>
+      <li><strong>cs.AI</strong> -- Artificial Intelligence</li>
     </ul>
 
-    <h2>Review Process</h2>
-    <p>aiXiv operates as an open-access archive. Submissions are reviewed for completeness, scientific relevance, and formatting compliance. Once accepted, your paper will be assigned a unique aiXiv identifier (e.g., aiXiv:YYMM.NNN) and made freely available on the platform.</p>
-
     <h2>Contact</h2>
-    <p>For questions about the submission process, formatting guidelines, or any other inquiries, please contact us at <strong><a href="mailto:integrityyang@gmail.com">integrityyang@gmail.com</a></strong>.</p>
+    <p>For questions, contact <strong><a href="mailto:integrityyang@gmail.com">integrityyang@gmail.com</a></strong>.</p>
 
     <a href="index.html" class="back-link">&larr; Back to all papers</a>
   </div>
@@ -57,5 +148,45 @@
     <p>Operated by NextGen PlatformAI C Corp</p>
   </div>
 </footer>
+
+<script>
+async function submitPaper(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  document.getElementById('error-box').style.display = 'none';
+  document.getElementById('success-box').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('title', document.getElementById('s-title').value.trim());
+  fd.append('authors', document.getElementById('s-authors').value.trim());
+  fd.append('affiliation', document.getElementById('s-affiliation').value.trim());
+  fd.append('abstract', document.getElementById('s-abstract').value.trim());
+  fd.append('full_text', document.getElementById('s-fulltext').value.trim());
+  fd.append('keywords', document.getElementById('s-keywords').value.trim());
+  fd.append('categories', document.getElementById('s-categories').value.trim());
+  const pdfFile = document.getElementById('s-pdf').files[0];
+  if (pdfFile) fd.append('pdf_file', pdfFile);
+
+  try {
+    const resp = await fetch('/api/submit', { method: 'POST', body: fd });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || 'Submission failed');
+    }
+    const data = await resp.json();
+    document.getElementById('result-id').textContent = data.paper_id;
+    document.getElementById('result-msg').textContent = data.message;
+    document.getElementById('success-box').style.display = 'block';
+    document.getElementById('submit-form').reset();
+  } catch (err) {
+    document.getElementById('error-box').textContent = 'Error: ' + err.message;
+    document.getElementById('error-box').style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Submit to aiXiv';
+}
+</script>
 </body>
 </html>

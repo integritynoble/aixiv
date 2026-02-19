@@ -794,6 +794,322 @@ async def dashboard_page(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
+# ═══════════════════════════════════════════════════════════════════
+# API: SSE Streaming Endpoints
+# ═══════════════════════════════════════════════════════════════════
+
+async def _sse_event(event_type: str, data: dict) -> str:
+    """Format a server-sent event."""
+    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+
+@app.post("/api/stream/review/{paper_id}")
+async def stream_review(paper_id: str):
+    """SSE stream for the full review pipeline."""
+    import asyncio
+
+    async def generate():
+        yield await _sse_event("status", {"step": "start", "message": "Starting review pipeline..."})
+
+        conn = get_db()
+        paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+        if not paper:
+            conn.close()
+            yield await _sse_event("error", {"message": "Paper not found"})
+            return
+        conn.close()
+
+        # Step 1: Peer Review
+        yield await _sse_event("status", {"step": "peer_review", "message": "Running peer review (3-layer analysis)..."})
+        try:
+            from orchestrator import run_full_review
+            results = run_full_review(paper_id)
+            yield await _sse_event("peer_review", {"review": results.get("peer_review", {})})
+            yield await _sse_event("status", {"step": "peer_review_done", "message": "Peer review complete"})
+            yield await _sse_event("redteam", {"report": results.get("redteam", {})})
+            yield await _sse_event("status", {"step": "redteam_done", "message": "Red team analysis complete"})
+            yield await _sse_event("meta_review", {"review": results.get("meta_review", {})})
+            yield await _sse_event("status", {"step": "meta_done", "message": "Meta-review complete"})
+            yield await _sse_event("complete", {
+                "paper_id": paper_id,
+                "status": results.get("new_status", ""),
+                "maturity_level": results.get("maturity_level", "L0"),
+                "peer_review": results.get("peer_review", {}),
+                "redteam": results.get("redteam", {}),
+                "meta_review": results.get("meta_review", {}),
+            })
+        except Exception as e:
+            yield await _sse_event("error", {"message": str(e)})
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.post("/api/stream/write/idea")
+async def stream_idea(request: Request):
+    """SSE stream for idea generation."""
+    data = await request.json()
+    topic = data.get("topic", "")
+    session_id = data.get("session_id", str(uuid.uuid4()))
+
+    async def generate():
+        if not topic:
+            yield await _sse_event("error", {"message": "topic is required"})
+            return
+
+        yield await _sse_event("status", {"step": "start", "message": "Generating 5 research ideas..."})
+
+        try:
+            from agents.idea_agent import run_idea_pipeline
+            idea, log = run_idea_pipeline(topic)
+
+            for entry in log:
+                yield await _sse_event("log", {"entry": entry})
+
+            conn = get_db()
+            now = datetime.utcnow().isoformat()
+            conn.execute("""
+                INSERT INTO writing_sessions (session_id, session_type, title, current_step,
+                                             idea, status, created_at, updated_at)
+                VALUES (?, 'pipeline', ?, 'idea', ?, 'active', ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    idea = excluded.idea, current_step = 'idea', updated_at = excluded.updated_at
+            """, (session_id, idea.get("title", ""), json.dumps(idea), now, now))
+            conn.commit()
+            conn.close()
+
+            yield await _sse_event("complete", {"session_id": session_id, "idea": idea})
+        except Exception as e:
+            yield await _sse_event("error", {"message": str(e)})
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Author Response to Review
+# ═══════════════════════════════════════════════════════════════════
+
+@app.post("/api/review/{paper_id}/respond")
+async def author_respond(paper_id: str, request: Request):
+    """Author responds to review with rebuttal/revisions.
+
+    Request body: {
+        "response_text": "Author's response to reviewers",
+        "addressed_items": ["R1.1", "R1.3", "RT.2"],
+        "revised_text": "Optionally, the revised full text",
+        "revised_abstract": "Optionally, the revised abstract"
+    }
+    """
+    data = await request.json()
+    response_text = data.get("response_text", "")
+    addressed_items = data.get("addressed_items", [])
+    revised_text = data.get("revised_text", "")
+    revised_abstract = data.get("revised_abstract", "")
+
+    if not response_text:
+        raise HTTPException(400, "response_text is required")
+
+    conn = get_db()
+    paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+    if not paper:
+        conn.close()
+        raise HTTPException(404, "Paper not found")
+
+    now = datetime.utcnow().isoformat()
+
+    # Generate revision letter using AI
+    from agents.revision_agent import generate_revision_letter
+
+    # Get review feedback
+    review = conn.execute(
+        "SELECT raw_review FROM reviews WHERE paper_id = ? ORDER BY created_at DESC LIMIT 1",
+        (paper_id,)
+    ).fetchone()
+
+    try:
+        letter = generate_revision_letter(
+            paper["title"],
+            review["raw_review"] if review else "",
+            response_text,
+        )
+    except Exception:
+        letter = response_text
+
+    # Create revision record
+    version = (paper["version"] or 1) + 1
+    conn.execute("""
+        INSERT INTO revisions (paper_id, version, changes_summary, revision_letter,
+                              revised_text, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 'submitted', ?)
+    """, (paper_id, version,
+          json.dumps({"addressed_items": addressed_items, "author_notes": response_text}),
+          letter,
+          revised_text or "", now))
+
+    # Update paper if revised text provided
+    updates = ["updated_at = ?"]
+    params = [now]
+    if revised_text:
+        updates.append("full_text = ?")
+        params.append(revised_text)
+    if revised_abstract:
+        updates.append("abstract = ?")
+        params.append(revised_abstract)
+
+    updates.append("version = ?")
+    params.append(version)
+
+    # Transition to re_review if in revision state
+    if paper["status"] in ("revision", "rejected"):
+        updates.append("status = ?")
+        params.append("re_review")
+
+    params.append(paper_id)
+    conn.execute(f"UPDATE papers SET {', '.join(updates)} WHERE paper_id = ?", params)
+    conn.commit()
+    conn.close()
+
+    from rail.decision_record import record_decision
+    record_decision(paper_id, "author_response", "author", "",
+                    f"Addressed: {', '.join(addressed_items)}", response_text[:500])
+
+    return JSONResponse({
+        "paper_id": paper_id,
+        "version": version,
+        "revision_letter": letter,
+        "status": "re_review" if paper["status"] in ("revision", "rejected") else paper["status"],
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Paper Comparison (Arena)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/arena/compare")
+async def compare_papers(paper_ids: str = ""):
+    """Compare multiple arena papers side by side.
+
+    Query param: paper_ids=aiXiv:2502.001,aiXiv:2502.002
+    """
+    if not paper_ids:
+        raise HTTPException(400, "paper_ids query parameter required (comma-separated)")
+
+    ids = [pid.strip() for pid in paper_ids.split(",") if pid.strip()]
+    if len(ids) < 2:
+        raise HTTPException(400, "At least 2 paper IDs required for comparison")
+
+    conn = get_db()
+    comparison = []
+    for pid in ids[:5]:  # max 5 papers
+        paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (pid,)).fetchone()
+        if not paper:
+            continue
+
+        review = conn.execute(
+            "SELECT * FROM reviews WHERE paper_id = ? ORDER BY created_at DESC LIMIT 1",
+            (pid,)
+        ).fetchone()
+        arena = conn.execute(
+            "SELECT * FROM arena_papers WHERE paper_id = ?", (pid,)
+        ).fetchone()
+
+        entry = {
+            "paper_id": pid,
+            "title": paper["title"],
+            "authors": paper["authors"],
+            "abstract": paper["abstract"][:300],
+            "maturity_level": paper["maturity_level"] or "L0",
+            "status": paper["status"],
+            "scores": {},
+            "arena_score": None,
+            "badges": [],
+        }
+        if review:
+            for dim in ["soundness", "novelty", "clarity", "significance", "reproducibility"]:
+                entry["scores"][dim] = review[dim] if review[dim] else 0
+            entry["scores"]["overall"] = review["overall_score"] if review["overall_score"] else 0
+        if arena:
+            entry["arena_score"] = arena["review_score"]
+            try:
+                entry["badges"] = json.loads(arena["badges"]) if arena["badges"] else []
+            except (json.JSONDecodeError, TypeError):
+                entry["badges"] = []
+
+        comparison.append(entry)
+
+    conn.close()
+    return JSONResponse(comparison)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Export (Writer)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/write/export/{session_id}")
+async def export_paper(session_id: str, format: str = "markdown"):
+    """Export paper from a writing session.
+
+    Query param: format=markdown|latex
+    """
+    conn = get_db()
+    session = conn.execute(
+        "SELECT * FROM writing_sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    conn.close()
+
+    if not session:
+        raise HTTPException(404, "Session not found")
+
+    content = session["current_content"] or ""
+    title = session["title"] or "Untitled"
+
+    if format == "latex":
+        # Convert markdown-style paper to LaTeX
+        latex = _md_to_latex(title, content)
+        return HTMLResponse(content=latex, media_type="text/plain",
+                          headers={"Content-Disposition": f'attachment; filename="{title[:40]}.tex"'})
+    else:
+        return HTMLResponse(content=content, media_type="text/markdown",
+                          headers={"Content-Disposition": f'attachment; filename="{title[:40]}.md"'})
+
+
+def _md_to_latex(title, md_content):
+    """Simple markdown to LaTeX converter for papers."""
+    lines = md_content.split("\n")
+    latex_lines = [
+        r"\documentclass[11pt]{article}",
+        r"\usepackage[utf8]{inputenc}",
+        r"\usepackage{amsmath,amssymb}",
+        r"\usepackage{graphicx}",
+        r"\usepackage{hyperref}",
+        r"\usepackage[margin=1in]{geometry}",
+        "",
+        r"\title{" + title.replace("_", r"\_") + "}",
+        r"\date{}",
+        "",
+        r"\begin{document}",
+        r"\maketitle",
+        "",
+    ]
+    for line in lines:
+        if line.startswith("# "):
+            latex_lines.append(r"\section{" + line[2:] + "}")
+        elif line.startswith("## "):
+            latex_lines.append(r"\subsection{" + line[3:] + "}")
+        elif line.startswith("### "):
+            latex_lines.append(r"\subsubsection{" + line[4:] + "}")
+        elif line.startswith("- "):
+            latex_lines.append(r"\begin{itemize}")
+            latex_lines.append(r"\item " + line[2:])
+            latex_lines.append(r"\end{itemize}")
+        else:
+            latex_lines.append(line)
+    latex_lines.append("")
+    latex_lines.append(r"\end{document}")
+    return "\n".join(latex_lines)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8501)

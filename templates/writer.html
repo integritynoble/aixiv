@@ -141,6 +141,11 @@
       <div class="btn-row"><button class="btn-primary" onclick="composePaper()" id="btn-compose">Compose Paper</button></div>
       <div class="loading" id="loading-compose"><div class="spinner"></div> Composing paper (7 sections)...</div>
       <div class="result-box" id="result-compose" style="display:none"></div>
+      <div class="btn-row" id="export-row" style="display:none">
+        <button class="btn-primary" onclick="exportPaper('markdown')">Export Markdown</button>
+        <button class="btn-primary" onclick="exportPaper('latex')" style="background:#6a1b9a">Export LaTeX</button>
+        <button class="btn-primary" onclick="submitToAixiv()" style="background:#2e7d32">Submit to aiXiv</button>
+      </div>
     </div>
   </div>
 
@@ -265,10 +270,34 @@ async function composePaper() {
     const data = await apiPost('/api/write/compose', {session_id: sessionId, authors});
     document.getElementById('result-compose').innerHTML = '<h4>Full Paper</h4>\n'+esc(data.full_paper||'');
     document.getElementById('result-compose').style.display = 'block';
+    document.getElementById('export-row').style.display = 'flex';
     markCompleted('compose');
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('btn-compose').disabled = false;
   document.getElementById('loading-compose').classList.remove('show');
+}
+
+function exportPaper(fmt) {
+  if (!sessionId) return alert('No session — compose a paper first');
+  window.open('/api/write/export/'+encodeURIComponent(sessionId)+'?format='+fmt, '_blank');
+}
+
+async function submitToAixiv() {
+  if (!sessionId) return alert('No session — compose a paper first');
+  try {
+    const sess = await (await fetch('/api/write/session/'+encodeURIComponent(sessionId))).json();
+    const idea = sess.idea || {};
+    const fd = new FormData();
+    fd.append('title', idea.title || 'Untitled');
+    fd.append('authors', document.getElementById('compose-authors').value.trim() || 'AI Scientist');
+    fd.append('abstract', (sess.sections && sess.sections.abstract) || idea.description || '');
+    fd.append('full_text', sess.current_content || '');
+    fd.append('keywords', (idea.keywords || []).join(', '));
+    const resp = await fetch('/api/submit', {method: 'POST', body: fd});
+    if (!resp.ok) throw new Error('Submission failed');
+    const data = await resp.json();
+    alert('Published on aiXiv as ' + data.paper_id + '! You can now review it on the Reviewer page.');
+  } catch(e) { alert('Error: '+e.message); }
 }
 
 async function sendChat() {

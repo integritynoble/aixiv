@@ -123,6 +123,7 @@
           <div id="maturity-display" style="margin-top:12px"></div>
         </div>
         <div class="scores-grid" id="scores-grid"></div>
+        <canvas id="radar-chart" width="280" height="280" style="display:none;margin:0 auto 16px;"></canvas>
 
         <div class="tab-bar">
           <button class="tab-btn active" onclick="showTab(this,'peer')">Peer Review</button>
@@ -141,6 +142,18 @@
           </div>
           <div class="loading" id="loading-action"><div class="spinner"></div> Processing...</div>
           <div class="result-text" id="action-result" style="margin-top:16px"></div>
+          <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
+            <h4 style="margin-bottom:8px">Author Response</h4>
+            <div class="form-group"><label>Response to Reviewers</label>
+              <textarea id="author-response" placeholder="Address reviewer concerns and describe changes made..." style="min-height:120px"></textarea>
+            </div>
+            <div class="form-group"><label>Addressed Item IDs (comma-separated)</label>
+              <input type="text" id="addressed-items" placeholder="e.g., R1.1, R1.3, RT.2">
+            </div>
+            <button class="btn-primary" onclick="submitAuthorResponse()">Submit Response &amp; Request Re-review</button>
+            <div class="loading" id="loading-respond"><div class="spinner"></div> Submitting response...</div>
+            <div class="result-text" id="respond-result" style="margin-top:12px"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -271,14 +284,53 @@ async function runFullReview() {
   ld.classList.add('show');
   try {
     const pid=await ensurePaper(); currentPaperId=pid;
-    const data=await apiPost('/api/review/'+encodeURIComponent(pid));
-    document.getElementById('results-card').style.display='block';
-    displayScores(data.peer_review||{});
-    displayRec(data.meta_review?.final_recommendation||data.peer_review?.recommendation);
-    displayMaturity(data.maturity_level||'L0');
-    displayPeer(data.peer_review||{});
-    displayRedTeam(data.redteam||{});
-    displayMeta(data.meta_review||{});
+    // Try SSE stream first, fall back to regular POST
+    try {
+      const resp=await fetch('/api/stream/review/'+encodeURIComponent(pid),{method:'POST'});
+      const reader=resp.body.getReader();
+      const decoder=new TextDecoder();
+      let buf='';
+      while(true){
+        const {done,value}=await reader.read();
+        if(done)break;
+        buf+=decoder.decode(value,{stream:true});
+        const events=buf.split('\n\n');
+        buf=events.pop();
+        for(const ev of events){
+          const lines=ev.split('\n');
+          let etype='',edata='';
+          for(const line of lines){
+            if(line.startsWith('event: '))etype=line.slice(7);
+            if(line.startsWith('data: '))edata=line.slice(6);
+          }
+          if(!etype)continue;
+          const d=JSON.parse(edata);
+          if(etype==='status')document.getElementById('loading-text').textContent=d.message||'Processing...';
+          if(etype==='complete'){
+            document.getElementById('results-card').style.display='block';
+            displayScores(d.peer_review||{});
+            drawRadarChart((d.peer_review||{}).layer1_peer_review||d.peer_review||{});
+            displayRec(d.meta_review?.final_recommendation||d.peer_review?.recommendation);
+            displayMaturity(d.maturity_level||'L0');
+            displayPeer(d.peer_review||{});
+            displayRedTeam(d.redteam||{});
+            displayMeta(d.meta_review||{});
+          }
+          if(etype==='error')throw new Error(d.message);
+        }
+      }
+    } catch(streamErr) {
+      // Fallback to regular endpoint
+      const data=await apiPost('/api/review/'+encodeURIComponent(pid));
+      document.getElementById('results-card').style.display='block';
+      displayScores(data.peer_review||{});
+      drawRadarChart((data.peer_review||{}).layer1_peer_review||data.peer_review||{});
+      displayRec(data.meta_review?.final_recommendation||data.peer_review?.recommendation);
+      displayMaturity(data.maturity_level||'L0');
+      displayPeer(data.peer_review||{});
+      displayRedTeam(data.redteam||{});
+      displayMeta(data.meta_review||{});
+    }
   } catch(e) { alert('Error: '+e.message); }
   ld.classList.remove('show');
 }
@@ -292,6 +344,7 @@ async function runPeerOnly() {
     const data=await apiPost('/api/review/'+encodeURIComponent(pid)+'/peer');
     document.getElementById('results-card').style.display='block';
     displayScores(data.review||{});
+    drawRadarChart((data.review||{}).layer1_peer_review||data.review||{});
     displayRec(data.review?.recommendation);
     displayPeer(data.review||{});
   } catch(e) { alert('Error: '+e.message); }
@@ -338,6 +391,71 @@ async function promoteToArena() {
     document.getElementById('action-result').innerHTML=
       '<strong>Promoted to Arena!</strong>\nScore: '+data.review_score+'\nMaturity: '+data.maturity_level+'\nBadges: '+(data.badges||[]).join(', ');
   } catch(e) { alert('Error: '+e.message); }
+}
+
+async function submitAuthorResponse() {
+  if (!currentPaperId) return alert('No paper selected');
+  const responseText=document.getElementById('author-response').value.trim();
+  if (!responseText) return alert('Please enter a response');
+  const items=document.getElementById('addressed-items').value.split(',').map(s=>s.trim()).filter(Boolean);
+  document.getElementById('loading-respond').classList.add('show');
+  try {
+    const data=await apiPost('/api/review/'+encodeURIComponent(currentPaperId)+'/respond',{
+      response_text:responseText, addressed_items:items
+    });
+    document.getElementById('respond-result').innerHTML=
+      '<strong>Response submitted (v'+data.version+')</strong>\nStatus: '+data.status+'\n\n'+esc(data.revision_letter||'');
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('loading-respond').classList.remove('show');
+}
+
+function drawRadarChart(scores) {
+  const canvas=document.getElementById('radar-chart');
+  if (!canvas) return;
+  const dims=['soundness','novelty','clarity','significance','reproducibility'];
+  const vals=dims.map(d=>{
+    const v=scores[d]; return typeof v==='object'?(v.score||0):(v||0);
+  });
+  if (vals.every(v=>v===0)) { canvas.style.display='none'; return; }
+  canvas.style.display='block';
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, R=100;
+  ctx.clearRect(0,0,W,H);
+  const n=dims.length, step=2*Math.PI/n, offset=-Math.PI/2;
+
+  // Grid
+  [0.2,0.4,0.6,0.8,1.0].forEach(r=>{
+    ctx.beginPath();
+    for(let i=0;i<=n;i++){const a=offset+i*step;ctx.lineTo(cx+R*r*Math.cos(a),cy+R*r*Math.sin(a));}
+    ctx.closePath(); ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // Axes + labels
+  ctx.font='11px sans-serif'; ctx.fillStyle='#666'; ctx.textAlign='center';
+  dims.forEach((d,i)=>{
+    const a=offset+i*step;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
+    ctx.strokeStyle='#bbb'; ctx.stroke();
+    const lx=cx+(R+18)*Math.cos(a), ly=cy+(R+18)*Math.sin(a);
+    ctx.fillText(d.charAt(0).toUpperCase()+d.slice(1),lx,ly+4);
+  });
+
+  // Data polygon
+  ctx.beginPath();
+  vals.forEach((v,i)=>{
+    const a=offset+i*step, r=R*(v/10);
+    if(i===0) ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
+    else ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
+  });
+  ctx.closePath(); ctx.fillStyle='rgba(180,50,50,0.2)'; ctx.fill();
+  ctx.strokeStyle='#b71c1c'; ctx.lineWidth=2; ctx.stroke();
+
+  // Data points
+  vals.forEach((v,i)=>{
+    const a=offset+i*step, r=R*(v/10);
+    ctx.beginPath(); ctx.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),4,0,2*Math.PI);
+    ctx.fillStyle='#b71c1c'; ctx.fill();
+  });
 }
 </script>
 </body>

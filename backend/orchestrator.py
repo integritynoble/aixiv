@@ -202,68 +202,9 @@ def run_rail_evaluation(paper_id, model=None):
 
 
 def promote_to_arena(paper_id):
-    """Promote an accepted paper to the Arena."""
-    conn = get_db()
-    paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
-    if not paper:
-        conn.close()
-        raise ValueError(f"Paper {paper_id} not found")
-
-    if paper["status"] not in ("accepted", "under_review", "revision"):
-        # Allow promotion if there are reviews
-        pass
-
-    reviews = conn.execute("SELECT * FROM reviews WHERE paper_id = ?", (paper_id,)).fetchall()
-    meta = conn.execute(
-        "SELECT * FROM meta_reviews WHERE paper_id = ? ORDER BY created_at DESC LIMIT 1",
-        (paper_id,)
-    ).fetchone()
-
-    if not reviews:
-        conn.close()
-        raise ValueError("Paper must be reviewed before promotion")
-
-    avg_score = sum(r["overall_score"] for r in reviews) / len(reviews)
-    maturity = paper["maturity_level"]
-
-    # Determine badges
-    badges = []
-    if maturity in ("L3", "L4", "L5"):
-        badges.append(f"{maturity} Certified")
-
-    redteam = conn.execute(
-        "SELECT * FROM redteam_reports WHERE paper_id = ? ORDER BY created_at DESC LIMIT 1",
-        (paper_id,)
-    ).fetchone()
-    if redteam and redteam["overall_risk"] in ("low",):
-        badges.append("Red-Team Cleared")
-
-    evals = conn.execute("SELECT * FROM eval_results WHERE paper_id = ?", (paper_id,)).fetchall()
-    if evals and all(e["score"] >= 5 for e in evals):
-        badges.append("Rail Compliant")
-
-    now = datetime.utcnow().isoformat()
-    conn.execute("""
-        INSERT OR REPLACE INTO arena_papers
-        (paper_id, title, authors, abstract, categories, pdf_path,
-         review_score, maturity_level, rail_compliant, review_count, badges, promoted_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (paper_id, paper["title"], paper["authors"], paper["abstract"],
-          paper["categories"], paper["pdf_path"], avg_score, maturity,
-          1 if "Rail Compliant" in badges else 0,
-          len(reviews), json.dumps(badges), now))
-
-    conn.execute("UPDATE papers SET status = 'published_arena', updated_at = ? WHERE paper_id = ?",
-                 (now, paper_id))
-    conn.commit()
-    conn.close()
-
-    return {
-        "paper_id": paper_id,
-        "review_score": avg_score,
-        "maturity_level": maturity,
-        "badges": badges,
-    }
+    """Promote an accepted paper to the Arena. Delegates to arena module."""
+    from arena import promote_paper
+    return promote_paper(paper_id)
 
 
 def get_pipeline_stats():
