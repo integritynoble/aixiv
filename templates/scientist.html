@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Scientist - aiXiv</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.sci-hero { text-align: center; padding: 48px 0 32px; }
+.sci-hero h1 { font-size: 36px; font-weight: 700; margin-bottom: 10px; }
+.sci-hero h1 .accent { color: var(--accent); }
+.sci-hero .tagline { font-size: 18px; color: var(--text-muted); max-width: 640px; margin: 0 auto 28px; line-height: 1.5; }
+
+/* Two-tier explanation */
+.tier-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+.tier-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.tier-card.tier-1::before { background: var(--accent); }
+.tier-card.tier-2::before { background: linear-gradient(90deg, #6a1b9a, #b31b1b); }
+.tier-badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 12px; margin-bottom: 12px; }
+.tier-1 .tier-badge { background: #fdeaea; color: var(--accent); }
+.tier-2 .tier-badge { background: #f3e5f5; color: #6a1b9a; }
+.tier-card h3 { font-size: 20px; margin-bottom: 8px; }
+.tier-card p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+/* Workflow */
+.workflow-section { margin-bottom: 40px; }
+.section-title { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.section-subtitle { font-size: 15px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+
+.workflow-steps { display: flex; gap: 0; position: relative; }
+.workflow-steps::before { content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 3px; background: var(--border); z-index: 0; }
+.wf-step { flex: 1; text-align: center; position: relative; z-index: 1; }
+.wf-dot { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-bottom: 10px; }
+.wf-dot.write { background: var(--accent); }
+.wf-dot.review { background: #1565c0; }
+.wf-dot.revise { background: #f57c00; }
+.wf-dot.arena { background: #6a1b9a; }
+.wf-label { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.wf-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; padding: 0 8px; }
+
+/* Capability cards */
+.cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 48px; }
+.cap-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; box-shadow: var(--shadow); text-align: center; transition: box-shadow 0.2s, transform 0.2s; }
+.cap-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.cap-icon { width: 56px; height: 56px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 14px; color: white; }
+.cap-icon.writer { background: var(--accent); }
+.cap-icon.reviewer { background: #1565c0; }
+.cap-icon.publish { background: #2e7d32; }
+.cap-card h3 { font-size: 17px; margin-bottom: 8px; }
+.cap-card p { font-size: 14px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; }
+.cap-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 6px 18px; transition: all 0.2s; text-decoration: none; }
+.cap-link:hover { background: var(--accent); color: white; }
+
+/* Maturity Ladder */
+.maturity-section { margin-bottom: 48px; }
+.maturity-ladder { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.maturity-levels { display: flex; flex-direction: column; gap: 0; }
+.maturity-level { display: flex; align-items: stretch; position: relative; }
+.ml-indicator { flex-shrink: 0; width: 64px; display: flex; flex-direction: column; align-items: center; position: relative; }
+.ml-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; z-index: 2; flex-shrink: 0; }
+.ml-line { flex: 1; width: 3px; background: var(--border); }
+.maturity-level:last-child .ml-line { display: none; }
+.ml-content { flex: 1; padding: 6px 0 20px 16px; }
+.ml-content h4 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.ml-content p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.ml-l0 .ml-dot { background: #9e9e9e; } .ml-l1 .ml-dot { background: #f57c00; }
+.ml-l2 .ml-dot { background: #fbc02d; } .ml-l3 .ml-dot { background: #43a047; }
+.ml-l4 .ml-dot { background: #1565c0; } .ml-l5 .ml-dot { background: #6a1b9a; }
+
+/* The Rail section */
+.rail-section { margin-bottom: 48px; }
+.rail-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.rail-card h3 { font-size: 20px; margin-bottom: 16px; color: var(--accent); }
+.rail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.rail-item { background: var(--code-bg); border-radius: var(--radius); padding: 16px 20px; border-left: 3px solid var(--accent); }
+.rail-item h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.rail-item p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+/* Stack */
+.stack-section { margin-bottom: 48px; }
+.stack-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+.stack-layers { display: flex; flex-direction: column; gap: 8px; }
+.stack-layer { display: flex; align-items: center; padding: 12px 16px; border-radius: var(--radius); font-size: 14px; }
+.stack-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; background: var(--accent); margin-right: 16px; flex-shrink: 0; }
+.stack-layer:nth-child(odd) { background: var(--code-bg); }
+
+@media (max-width: 768px) {
+  .tier-section, .cap-grid, .rail-grid { grid-template-columns: 1fr; }
+  .workflow-steps { flex-direction: column; gap: 16px; }
+  .workflow-steps::before { display: none; }
+  .sci-hero h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="/">Papers</a>
+      <a href="/scientist" class="active">AI Scientist</a>
+      <a href="/writer">Writer</a>
+      <a href="/reviewer">Reviewer</a>
+      <a href="/arena">Arena</a>
+      <a href="/dashboard">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="sci-hero">
+    <h1>AI Scientist: <span class="accent">The Rail</span> for Scientific Publishing</h1>
+    <p class="tagline">An end-to-end platform for writing, reviewing, and publishing scientific papers — powered by AI agents and grounded in the SolveEverything.org framework.</p>
+  </section>
+
+  <!-- Two-Tier System -->
+  <section class="tier-section">
+    <div class="tier-card tier-1">
+      <span class="tier-badge">Tier 1 — aiXiv</span>
+      <h3>Open Publishing</h3>
+      <p>Any paper can be published on aiXiv. Like arXiv, it serves as an open-access archive and distribution service. No gatekeeping — every contribution is welcome and gets a permanent, citable identifier (aiXiv:YYMM.NNN).</p>
+    </div>
+    <div class="tier-card tier-2">
+      <span class="tier-badge">Tier 2 — The Arena</span>
+      <h3>AI-Reviewed Quality</h3>
+      <p>Papers that pass rigorous AI peer review are promoted to the Arena. Three-layer evaluation: standard review scores, L0-L5 maturity assessment, and red team adversarial analysis. Only quality-verified papers earn Arena badges.</p>
+    </div>
+  </section>
+
+  <!-- Workflow -->
+  <section class="workflow-section">
+    <h2 class="section-title">End-to-End Workflow</h2>
+    <p class="section-subtitle">From research idea to Arena publication in four phases</p>
+    <div class="workflow-steps">
+      <div class="wf-step">
+        <div class="wf-dot write">1</div>
+        <div class="wf-label">Write</div>
+        <div class="wf-desc">Idea generation, novelty check, methodology, full paper composition</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-dot write">2</div>
+        <div class="wf-label">Publish</div>
+        <div class="wf-desc">Submit to aiXiv (Tier 1) — instant open-access publication</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-dot review">3</div>
+        <div class="wf-label">Review</div>
+        <div class="wf-desc">AI peer review + red team + meta-review + L0-L5 maturity</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-dot revise">4</div>
+        <div class="wf-label">Revise</div>
+        <div class="wf-desc">AI-assisted revision based on structured feedback</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-dot arena">5</div>
+        <div class="wf-label">Arena</div>
+        <div class="wf-desc">Accepted papers promoted to Arena leaderboard (Tier 2)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capabilities -->
+  <h2 class="section-title">Platform Capabilities</h2>
+  <p class="section-subtitle">Three tools to accelerate your research workflow</p>
+
+  <section class="cap-grid">
+    <div class="cap-card">
+      <div class="cap-icon writer">&#9998;</div>
+      <h3>AI Writer</h3>
+      <p>Multi-stage paper composition: idea generation with maker/critic loop, arXiv novelty check, methodology development with review, and section-by-section paper writing.</p>
+      <a href="/writer" class="cap-link">Start Writing</a>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon reviewer">&#128269;</div>
+      <h3>AI Reviewer</h3>
+      <p>Three-layer evaluation: standard peer review (soundness, novelty, clarity, significance), L0-L5 maturity assessment, red team adversarial analysis, and meta-review synthesis.</p>
+      <a href="/reviewer" class="cap-link">Get a Review</a>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon publish">&#128640;</div>
+      <h3>Submit &amp; Publish</h3>
+      <p>Submit papers to aiXiv for open publication. After AI review and revision, accepted papers are promoted to the Arena leaderboard with quality badges.</p>
+      <a href="/reviewer" class="cap-link">Submit Paper</a>
+    </div>
+  </section>
+
+  <!-- The Rail -->
+  <section class="rail-section">
+    <h2 class="section-title">The Rail</h2>
+    <p class="section-subtitle">Standardized evaluation infrastructure from SolveEverything.org</p>
+    <div class="rail-card">
+      <h3>How The Rail Works</h3>
+      <p style="font-size:14px; color:var(--text-muted); line-height:1.65; margin-bottom:20px;">
+        The Rail is the standardized evaluation harness for scientific publishing on aiXiv. It ensures every paper is assessed rigorously, reproducibly, and fairly through four key components:
+      </p>
+      <div class="rail-grid">
+        <div class="rail-item">
+          <h4>Targeting System</h4>
+          <p>Structured criteria mapping to L0-L5 maturity levels. Each level has a specific checklist — papers must satisfy threshold items to qualify. Clear, measurable, auditable.</p>
+        </div>
+        <div class="rail-item">
+          <h4>4-Scenario Evaluation</h4>
+          <p>Every paper evaluated under: ideal conditions, real-world noise, operator mismatch, and adversarial perturbation. Claims must be robust, not cherry-picked.</p>
+        </div>
+        <div class="rail-item">
+          <h4>Red Team Analysis</h4>
+          <p>Adversarial audit checking logical integrity, statistical validity, reproducibility gaps, adversarial scenarios, and overclaiming. Every finding cites specific evidence.</p>
+        </div>
+        <div class="rail-item">
+          <h4>DR-AIS Audit Log</h4>
+          <p>Decision Records for AI Systems — immutable logs of every AI decision during review. Full transparency: model used, prompt hash, input/output summary, timestamp.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Industrial Intelligence Stack -->
+  <section class="stack-section">
+    <h2 class="section-title">Industrial Intelligence Stack</h2>
+    <p class="section-subtitle">The nine layers from SolveEverything.org mapped to aiXiv</p>
+    <div class="stack-card">
+      <div class="stack-layers">
+        <div class="stack-layer"><div class="stack-num">1</div><strong>Purpose &amp; Payoff</strong>&nbsp;— Quantifiable metrics (review scores, maturity levels, Arena ranking)</div>
+        <div class="stack-layer"><div class="stack-num">2</div><strong>Task Taxonomy</strong>&nbsp;— Paper lifecycle stages (submit, review, revise, promote)</div>
+        <div class="stack-layer"><div class="stack-num">3</div><strong>Observability</strong>&nbsp;— Dashboard analytics, pipeline status, maturity distribution</div>
+        <div class="stack-layer"><div class="stack-num">4</div><strong>Targeting System</strong>&nbsp;— L0-L5 criteria checklists for maturity assessment</div>
+        <div class="stack-layer"><div class="stack-num">5</div><strong>Model Layer</strong>&nbsp;— Claude AI agents (writer, reviewer, red team, meta-reviewer)</div>
+        <div class="stack-layer"><div class="stack-num">6</div><strong>Actuation</strong>&nbsp;— Automated paper composition, review generation, revision suggestions</div>
+        <div class="stack-layer"><div class="stack-num">7</div><strong>Verification</strong>&nbsp;— Red team analysis, 4-scenario evaluation, adversarial testing</div>
+        <div class="stack-layer"><div class="stack-num">8</div><strong>Governance</strong>&nbsp;— Arena leaderboard ranking by quality, not volume</div>
+        <div class="stack-layer"><div class="stack-num">9</div><strong>Distribution</strong>&nbsp;— Open-access aiXiv archive at aixiv.platformai.org</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Maturity Ladder -->
+  <section class="maturity-section">
+    <h2 class="section-title">L0-L5 Maturity Ladder</h2>
+    <p class="section-subtitle">From SolveEverything.org — every problem has a maturity level</p>
+    <div class="maturity-ladder">
+      <div class="maturity-levels">
+        <div class="maturity-level ml-l0"><div class="ml-indicator"><div class="ml-dot">L0</div><div class="ml-line"></div></div><div class="ml-content"><h4>Ill-Posed</h4><p>No clear metrics defined. Problem statement vague, success criteria undefined, no way to measure progress.</p></div></div>
+        <div class="maturity-level ml-l1"><div class="ml-indicator"><div class="ml-dot">L1</div><div class="ml-line"></div></div><div class="ml-content"><h4>Measurable</h4><p>Clear metrics and baselines established. Defined evaluation protocols, quantitative benchmarks, reproducible measurement.</p></div></div>
+        <div class="maturity-level ml-l2"><div class="ml-indicator"><div class="ml-dot">L2</div><div class="ml-line"></div></div><div class="ml-content"><h4>Repeatable</h4><p>Reproducible results. Independent teams can replicate findings using published methodology, code, and data.</p></div></div>
+        <div class="maturity-level ml-l3"><div class="ml-indicator"><div class="ml-dot">L3</div><div class="ml-line"></div></div><div class="ml-content"><h4>Automated</h4><p>AI agents can execute research tasks. Workflow sufficiently formalized for automated experiments and reporting.</p></div></div>
+        <div class="maturity-level ml-l4"><div class="ml-indicator"><div class="ml-dot">L4</div><div class="ml-line"></div></div><div class="ml-content"><h4>Industrialized</h4><p>Commodity solutions exist. Standardized tools address the problem reliably. Performance predictable and cost-effective.</p></div></div>
+        <div class="maturity-level ml-l5"><div class="ml-indicator"><div class="ml-dot">L5</div><div class="ml-line"></div></div><div class="ml-content"><h4>Solved</h4><p>Compute-bound only. Problem fully characterized, solutions limited only by available computation. No scientific unknowns remain.</p></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>

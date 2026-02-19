@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Writer - aiXiv</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.writer-container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+.writer-hero { text-align: center; margin-bottom: 32px; }
+.writer-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.writer-hero h1 .accent { color: var(--accent); }
+.writer-hero p { font-size: 15px; color: var(--text-muted); }
+
+.steps-bar { display: flex; gap: 0; margin-bottom: 32px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.step-item { flex: 1; text-align: center; padding: 12px 8px; font-size: 13px; font-weight: 600; background: var(--code-bg); color: var(--text-muted); position: relative; cursor: pointer; transition: all 0.2s; }
+.step-item:not(:last-child)::after { content: ''; position: absolute; right: -1px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+.step-item.active { background: var(--accent); color: white; }
+.step-item.completed { background: #2e7d32; color: white; }
+.step-item .step-num { display: block; font-size: 18px; margin-bottom: 2px; }
+
+.panel { display: none; }
+.panel.active { display: block; }
+.panel-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.panel-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.panel-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 16px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.form-group textarea, .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.form-group textarea { min-height: 120px; resize: vertical; }
+
+.btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 12px; margin-top: 16px; }
+
+.result-box { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 16px; margin-top: 16px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+.result-box h4 { font-weight: 700; margin-bottom: 8px; }
+
+.loading { display: none; align-items: center; gap: 8px; padding: 12px; color: var(--text-muted); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.chat-messages { max-height: 500px; overflow-y: auto; margin-bottom: 16px; }
+.chat-msg { padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+.chat-msg.user { background: #e3f2fd; margin-left: 40px; }
+.chat-msg.assistant { background: var(--code-bg); margin-right: 40px; }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row textarea { flex: 1; min-height: 60px; }
+
+.novelty-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.novelty-badge.novel { background: #e8f5e9; color: #2e7d32; }
+.novelty-badge.not_novel { background: #ffebee; color: #c62828; }
+.novelty-badge.needs_more_search { background: #fff8e1; color: #f57f17; }
+.paper-result { padding: 8px 12px; border-left: 3px solid var(--border); margin-bottom: 8px; font-size: 13px; }
+.paper-result .pr-title { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="/">Papers</a>
+      <a href="/scientist">AI Scientist</a>
+      <a href="/writer" class="active">Writer</a>
+      <a href="/reviewer">Reviewer</a>
+      <a href="/arena">Arena</a>
+      <a href="/dashboard">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<main class="writer-container">
+  <div class="writer-hero">
+    <h1>AI <span class="accent">Writer</span></h1>
+    <p>Write scientific papers with AI assistance — from idea to full paper</p>
+  </div>
+
+  <div class="steps-bar">
+    <div class="step-item active" onclick="showPanel('idea')" id="step-idea"><span class="step-num">1</span> Idea</div>
+    <div class="step-item" onclick="showPanel('novelty')" id="step-novelty"><span class="step-num">2</span> Novelty</div>
+    <div class="step-item" onclick="showPanel('method')" id="step-method"><span class="step-num">3</span> Methods</div>
+    <div class="step-item" onclick="showPanel('compose')" id="step-compose"><span class="step-num">4</span> Compose</div>
+    <div class="step-item" onclick="showPanel('chat')" id="step-chat"><span class="step-num">&#9998;</span> Chat</div>
+  </div>
+
+  <!-- Idea -->
+  <div class="panel active" id="panel-idea">
+    <div class="panel-card">
+      <h3>Step 1: Generate Research Ideas</h3>
+      <p>Describe your research topic, data, or problem. The AI generates 5 ideas, critiques them, and refines the best one.</p>
+      <div class="form-group">
+        <label>Research Topic / Data Description</label>
+        <textarea id="idea-topic" placeholder="e.g., I have CASSI hyperspectral imaging data with known operator mismatch. I want to explore how physics-informed methods can correct calibration errors..."></textarea>
+      </div>
+      <div class="btn-row"><button class="btn-primary" onclick="generateIdea()" id="btn-idea">Generate Ideas</button></div>
+      <div class="loading" id="loading-idea"><div class="spinner"></div> Generating ideas (5 ideas, 2 critique rounds, 1 refinement)...</div>
+      <div class="result-box" id="result-idea" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Novelty -->
+  <div class="panel" id="panel-novelty">
+    <div class="panel-card">
+      <h3>Step 2: Novelty Check</h3>
+      <p>Search arXiv to assess whether the idea is novel. The system iteratively searches with refined queries.</p>
+      <div class="form-group">
+        <label>Idea to Check (auto-filled from Step 1)</label>
+        <textarea id="novelty-text" placeholder="Paste or edit the idea to check for novelty..."></textarea>
+      </div>
+      <div class="btn-row"><button class="btn-primary" onclick="checkNovelty()" id="btn-novelty">Check Novelty</button></div>
+      <div class="loading" id="loading-novelty"><div class="spinner"></div> Searching arXiv literature...</div>
+      <div class="result-box" id="result-novelty" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Methods -->
+  <div class="panel" id="panel-method">
+    <div class="panel-card">
+      <h3>Step 3: Develop Methodology</h3>
+      <p>Generate a detailed experimental methodology. The AI creates a plan, reviews it, then refines it.</p>
+      <div class="btn-row"><button class="btn-primary" onclick="generateMethod()" id="btn-method">Generate Methodology</button></div>
+      <div class="loading" id="loading-method"><div class="spinner"></div> Developing methodology (generate + review + refine)...</div>
+      <div class="result-box" id="result-method" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Compose -->
+  <div class="panel" id="panel-compose">
+    <div class="panel-card">
+      <h3>Step 4: Compose Full Paper</h3>
+      <p>Write the paper section by section: Abstract, Introduction, Related Work, Methods, Experiments, Discussion, Conclusion.</p>
+      <div class="form-group">
+        <label>Authors</label>
+        <input type="text" id="compose-authors" placeholder="Author names">
+      </div>
+      <div class="btn-row"><button class="btn-primary" onclick="composePaper()" id="btn-compose">Compose Paper</button></div>
+      <div class="loading" id="loading-compose"><div class="spinner"></div> Composing paper (7 sections)...</div>
+      <div class="result-box" id="result-compose" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="panel" id="panel-chat">
+    <div class="panel-card">
+      <h3>Free-Form Writing Chat</h3>
+      <p>Chat with the AI writer about anything — sections, arguments, or writing questions.</p>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="Ask the AI writer anything..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        <button class="btn-primary" onclick="sendChat()" id="btn-chat">Send</button>
+      </div>
+      <div class="loading" id="loading-chat"><div class="spinner"></div> Writing...</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+
+<script>
+let sessionId = '';
+let chatSessionId = '';
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('step-' + name).classList.add('active');
+}
+function markCompleted(name) { document.getElementById('step-' + name).classList.add('completed'); }
+
+async function apiPost(url, body) {
+  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (!resp.ok) { const e = await resp.json().catch(()=>({detail:'Request failed'})); throw new Error(e.detail||'Request failed'); }
+  return resp.json();
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+async function generateIdea() {
+  const topic = document.getElementById('idea-topic').value.trim();
+  if (!topic) return alert('Please enter a research topic');
+  document.getElementById('btn-idea').disabled = true;
+  document.getElementById('loading-idea').classList.add('show');
+  document.getElementById('result-idea').style.display = 'none';
+  try {
+    const data = await apiPost('/api/write/idea', {topic, session_id: sessionId});
+    sessionId = data.session_id;
+    const idea = data.idea;
+    let h = '<h4>Selected Idea</h4><strong>' + esc(idea.title||'') + '</strong>\n\n' + esc(idea.description||'');
+    if (idea.key_contribution) h += '\n\n<strong>Key Contribution:</strong> ' + esc(idea.key_contribution);
+    if (idea.methodology_sketch) h += '\n\n<strong>Methodology Sketch:</strong> ' + esc(idea.methodology_sketch);
+    if (idea.metrics) h += '\n\n<strong>Metrics:</strong> ' + esc(Array.isArray(idea.metrics)?idea.metrics.join(', '):idea.metrics);
+    if (idea.maturity_target) h += '\n<strong>Maturity Target:</strong> ' + esc(idea.maturity_target);
+    document.getElementById('result-idea').innerHTML = h;
+    document.getElementById('result-idea').style.display = 'block';
+    document.getElementById('novelty-text').value = (idea.title||'')+': '+(idea.description||'');
+    markCompleted('idea');
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('btn-idea').disabled = false;
+  document.getElementById('loading-idea').classList.remove('show');
+}
+
+async function checkNovelty() {
+  const text = document.getElementById('novelty-text').value.trim();
+  if (!text) return alert('Please enter idea text');
+  document.getElementById('btn-novelty').disabled = true;
+  document.getElementById('loading-novelty').classList.add('show');
+  document.getElementById('result-novelty').style.display = 'none';
+  try {
+    const data = await apiPost('/api/write/novelty', {idea_text: text, session_id: sessionId});
+    const a = data.assessment||{};
+    let h = '<h4>Novelty Assessment</h4>';
+    h += '<span class="novelty-badge '+(a.decision||'')+'">'+(a.decision||'?').replace(/_/g,' ')+'</span>';
+    h += ' (confidence: '+(a.confidence||'?')+')\n\n'+esc(a.summary||'');
+    if (a.unique_aspects && a.unique_aspects.length) {
+      h += '\n\n<strong>Unique Aspects:</strong>';
+      a.unique_aspects.forEach(u => h += '\n  + '+esc(u));
+    }
+    if (data.top_papers && data.top_papers.length) {
+      h += '\n\n<strong>Related Papers ('+data.papers_found+' found):</strong>';
+      data.top_papers.slice(0,5).forEach(p => {
+        h += '\n<div class="paper-result"><span class="pr-title">'+esc(p.title)+'</span>\n'+esc((p.authors||[]).join(', '))+'</div>';
+      });
+    }
+    document.getElementById('result-novelty').innerHTML = h;
+    document.getElementById('result-novelty').style.display = 'block';
+    markCompleted('novelty');
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('btn-novelty').disabled = false;
+  document.getElementById('loading-novelty').classList.remove('show');
+}
+
+async function generateMethod() {
+  document.getElementById('btn-method').disabled = true;
+  document.getElementById('loading-method').classList.add('show');
+  document.getElementById('result-method').style.display = 'none';
+  try {
+    const data = await apiPost('/api/write/method', {session_id: sessionId});
+    let h = '<h4>Refined Methodology</h4>\n'+esc(data.methodology||'');
+    if (data.review_feedback) h += '\n\n<h4>Review Feedback</h4>\n'+esc(data.review_feedback);
+    document.getElementById('result-method').innerHTML = h;
+    document.getElementById('result-method').style.display = 'block';
+    markCompleted('method');
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('btn-method').disabled = false;
+  document.getElementById('loading-method').classList.remove('show');
+}
+
+async function composePaper() {
+  const authors = document.getElementById('compose-authors').value.trim();
+  document.getElementById('btn-compose').disabled = true;
+  document.getElementById('loading-compose').classList.add('show');
+  document.getElementById('result-compose').style.display = 'none';
+  try {
+    const data = await apiPost('/api/write/compose', {session_id: sessionId, authors});
+    document.getElementById('result-compose').innerHTML = '<h4>Full Paper</h4>\n'+esc(data.full_paper||'');
+    document.getElementById('result-compose').style.display = 'block';
+    markCompleted('compose');
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('btn-compose').disabled = false;
+  document.getElementById('loading-compose').classList.remove('show');
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML += '<div class="chat-msg user">'+esc(msg)+'</div>';
+  input.value = '';
+  document.getElementById('loading-chat').classList.add('show');
+  try {
+    const data = await apiPost('/api/write/chat', {prompt: msg, session_id: chatSessionId});
+    chatSessionId = data.session_id;
+    msgs.innerHTML += '<div class="chat-msg assistant">'+esc(data.response||'')+'</div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    msgs.innerHTML += '<div class="chat-msg assistant" style="color:red">Error: '+esc(e.message)+'</div>';
+  }
+  document.getElementById('loading-chat').classList.remove('show');
+}
+</script>
+</body>
+</html>

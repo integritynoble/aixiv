@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Reviewer - aiXiv</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.reviewer-container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+.reviewer-hero { text-align: center; margin-bottom: 32px; }
+.reviewer-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.reviewer-hero h1 .accent { color: var(--accent); }
+.reviewer-hero p { font-size: 15px; color: var(--text-muted); }
+
+.review-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .review-layout { grid-template-columns: 1fr; } }
+
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.form-group input, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.btn-outline { background: white; color: var(--accent); border: 1px solid var(--accent); padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-outline:hover { background: var(--accent); color: white; }
+
+.scores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.score-item { text-align: center; padding: 12px; background: var(--code-bg); border-radius: var(--radius); }
+.score-val { font-size: 28px; font-weight: 700; color: var(--accent); }
+.score-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.maturity-bar { display: flex; gap: 0; margin: 16px 0; border-radius: var(--radius); overflow: hidden; }
+.maturity-seg { flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 700; color: white; opacity: 0.3; }
+.maturity-seg.reached { opacity: 1; }
+.maturity-seg.l0 { background: #9e9e9e; } .maturity-seg.l1 { background: #f57c00; }
+.maturity-seg.l2 { background: #fbc02d; color: #333; } .maturity-seg.l3 { background: #43a047; }
+.maturity-seg.l4 { background: #1565c0; } .maturity-seg.l5 { background: #6a1b9a; }
+
+.rec-badge { display: inline-block; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; }
+.rec-badge.accept { background: #e8f5e9; color: #2e7d32; }
+.rec-badge.minor_revision { background: #e3f2fd; color: #1565c0; }
+.rec-badge.major_revision { background: #fff8e1; color: #f57f17; }
+.rec-badge.reject { background: #ffebee; color: #c62828; }
+
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+.tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none; border-right: none; border-top: none; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.finding { padding: 12px 16px; border-left: 4px solid var(--border); margin-bottom: 10px; border-radius: 0 4px 4px 0; background: var(--code-bg); font-size: 14px; line-height: 1.5; }
+.finding.critical { border-left-color: #c62828; } .finding.major { border-left-color: #f57f17; }
+.finding.minor { border-left-color: #1565c0; } .finding.suggestion { border-left-color: #43a047; }
+.finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.finding-sev { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 8px; }
+.finding-sev.critical { background: #ffebee; color: #c62828; }
+.finding-sev.major { background: #fff8e1; color: #f57f17; }
+.finding-sev.minor { background: #e3f2fd; color: #1565c0; }
+.finding-sev.suggestion { background: #e8f5e9; color: #2e7d32; }
+
+.result-text { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+.loading { display: none; align-items: center; gap: 8px; padding: 12px; color: var(--text-muted); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="/">Papers</a>
+      <a href="/scientist">AI Scientist</a>
+      <a href="/writer">Writer</a>
+      <a href="/reviewer" class="active">Reviewer</a>
+      <a href="/arena">Arena</a>
+      <a href="/dashboard">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<main class="reviewer-container">
+  <div class="reviewer-hero">
+    <h1>AI <span class="accent">Reviewer</span></h1>
+    <p>Three-layer peer review: Standard Review + L0-L5 Maturity + Red Team Analysis</p>
+  </div>
+
+  <div class="review-layout">
+    <div>
+      <div class="card">
+        <h3>Submit Paper for Review</h3>
+        <div class="form-group">
+          <label>Paper ID (if already on aiXiv)</label>
+          <input type="text" id="review-paper-id" placeholder="e.g., aiXiv:2502.001">
+        </div>
+        <p style="text-align:center; color:var(--text-muted); font-size:13px; margin:8px 0;">— or submit new —</p>
+        <div class="form-group"><label>Title</label><input type="text" id="review-title" placeholder="Paper title"></div>
+        <div class="form-group"><label>Authors</label><input type="text" id="review-authors" placeholder="Author names"></div>
+        <div class="form-group"><label>Abstract</label><textarea id="review-abstract" placeholder="Paper abstract"></textarea></div>
+        <div class="form-group"><label>Full Text (recommended for thorough review)</label><textarea id="review-fulltext" style="min-height:200px" placeholder="Paste full paper text here"></textarea></div>
+        <div class="form-group"><label>Categories</label><input type="text" id="review-categories" placeholder="e.g., physics.comp-img, cs.CV"></div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="runFullReview()">Full Review Pipeline</button>
+          <button class="btn-outline" onclick="runPeerOnly()">Peer Review Only</button>
+          <button class="btn-outline" onclick="runRedTeam()">Red Team Only</button>
+        </div>
+        <div class="loading" id="loading-review"><div class="spinner"></div> <span id="loading-text">Running review...</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" id="results-card" style="display:none">
+        <h3>Review Results</h3>
+        <div style="text-align:center; margin-bottom:16px;">
+          <span class="rec-badge" id="rec-badge"></span>
+          <div id="maturity-display" style="margin-top:12px"></div>
+        </div>
+        <div class="scores-grid" id="scores-grid"></div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="showTab(this,'peer')">Peer Review</button>
+          <button class="tab-btn" onclick="showTab(this,'redteam')">Red Team</button>
+          <button class="tab-btn" onclick="showTab(this,'meta')">Meta-Review</button>
+          <button class="tab-btn" onclick="showTab(this,'actions')">Actions</button>
+        </div>
+
+        <div class="tab-content active" id="tab-peer"><div class="result-text" id="peer-content"></div></div>
+        <div class="tab-content" id="tab-redteam"><div id="redteam-content"></div></div>
+        <div class="tab-content" id="tab-meta"><div class="result-text" id="meta-content"></div></div>
+        <div class="tab-content" id="tab-actions">
+          <div class="btn-row">
+            <button class="btn-primary" onclick="requestRevision()">Get Revision Suggestions</button>
+            <button class="btn-outline" onclick="promoteToArena()">Promote to Arena</button>
+          </div>
+          <div class="loading" id="loading-action"><div class="spinner"></div> Processing...</div>
+          <div class="result-text" id="action-result" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+
+<script>
+let currentPaperId = '';
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function showTab(btn,name) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function apiPost(url, body) {
+  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:body?JSON.stringify(body):undefined});
+  if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.detail||'Failed'); }
+  return resp.json();
+}
+
+async function ensurePaper() {
+  let pid = document.getElementById('review-paper-id').value.trim();
+  if (pid) return pid;
+  const title=document.getElementById('review-title').value.trim();
+  const abstract=document.getElementById('review-abstract').value.trim();
+  if (!title||!abstract) throw new Error('Provide paper ID or title+abstract');
+  const fd=new FormData();
+  fd.append('title',title);
+  fd.append('authors',document.getElementById('review-authors').value.trim()||'Anonymous');
+  fd.append('abstract',abstract);
+  fd.append('full_text',document.getElementById('review-fulltext').value.trim());
+  fd.append('categories',document.getElementById('review-categories').value.trim());
+  const resp=await fetch('/api/submit',{method:'POST',body:fd});
+  if (!resp.ok) throw new Error('Submission failed');
+  const data=await resp.json();
+  document.getElementById('review-paper-id').value=data.paper_id;
+  return data.paper_id;
+}
+
+function displayScores(review) {
+  const l1=review.layer1_peer_review||review;
+  const dims=['soundness','novelty','clarity','significance','reproducibility'];
+  let h='';
+  dims.forEach(d=>{
+    const val=l1[d]; const score=typeof val==='object'?(val.score||'?'):(val||'?');
+    h+='<div class="score-item"><div class="score-val">'+score+'</div><div class="score-label">'+d+'</div></div>';
+  });
+  h+='<div class="score-item"><div class="score-val">'+(review.overall_score||'?')+'</div><div class="score-label">Overall /10</div></div>';
+  document.getElementById('scores-grid').innerHTML=h;
+}
+
+function displayMaturity(level) {
+  const levels=['L0','L1','L2','L3','L4','L5'];
+  const idx=levels.indexOf(level);
+  let h='<div class="maturity-bar">';
+  levels.forEach((l,i)=>{ h+='<div class="maturity-seg '+l.toLowerCase()+(i<=idx?' reached':'')+'">'+l+'</div>'; });
+  h+='</div>';
+  document.getElementById('maturity-display').innerHTML=h;
+}
+
+function displayRec(rec) {
+  const b=document.getElementById('rec-badge');
+  b.className='rec-badge '+(rec||'').replace(/ /g,'_');
+  b.textContent=(rec||'pending').replace(/_/g,' ');
+}
+
+function displayPeer(review) {
+  const l1=review.layer1_peer_review||{};
+  let h='';
+  if (review.summary) h+='<strong>Summary:</strong> '+esc(review.summary)+'\n\n';
+  ['strengths','weaknesses','questions'].forEach(k=>{
+    if (l1[k]) {
+      h+='<strong>'+k.charAt(0).toUpperCase()+k.slice(1)+':</strong>\n';
+      (Array.isArray(l1[k])?l1[k]:[l1[k]]).forEach(s=>h+='  '+esc(s)+'\n');
+      h+='\n';
+    }
+  });
+  if (review.detailed_feedback) h+='<strong>Detailed Feedback:</strong>\n'+esc(review.detailed_feedback);
+  document.getElementById('peer-content').innerHTML=h;
+}
+
+function displayRedTeam(rt) {
+  let h='<div style="margin-bottom:12px"><strong>Risk:</strong> '+esc(rt.overall_risk||'?')+' | <strong>Confidence:</strong> '+(rt.confidence_in_conclusions||'?')+'</div>';
+  if (rt.summary) h+='<p style="margin-bottom:12px">'+esc(rt.summary)+'</p>';
+  (rt.findings||[]).forEach(f=>{
+    const sev=f.severity||'minor';
+    h+='<div class="finding '+sev+'"><div class="finding-header"><strong>'+esc((f.id||'')+': '+(f.title||''))+'</strong>';
+    h+='<span class="finding-sev '+sev+'">'+sev+'</span></div>';
+    h+='<div style="font-size:13px;margin-top:4px">'+esc(f.description||'')+'</div>';
+    if (f.recommendation) h+='<div style="font-size:12px;color:#2e7d32;margin-top:4px"><strong>Fix:</strong> '+esc(f.recommendation)+'</div>';
+    h+='</div>';
+  });
+  document.getElementById('redteam-content').innerHTML=h;
+}
+
+function displayMeta(meta) {
+  let h='<strong>Recommendation:</strong> '+esc((meta.final_recommendation||'?').replace(/_/g,' '))+'\n';
+  h+='<strong>Confidence:</strong> '+(meta.confidence||'?')+'\n';
+  h+='<strong>Arena Eligible:</strong> '+(meta.arena_eligible?'Yes':'No')+'\n\n';
+  if (meta.justification) h+=esc(meta.justification)+'\n\n';
+  if (meta.required_changes&&meta.required_changes.length) {
+    h+='<strong>Required Changes:</strong>\n';
+    meta.required_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');
+    h+='\n';
+  }
+  if (meta.suggested_changes&&meta.suggested_changes.length) {
+    h+='<strong>Suggested Changes:</strong>\n';
+    meta.suggested_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');
+    h+='\n';
+  }
+  if (meta.summary_for_authors) h+='<strong>Summary for Authors:</strong>\n'+esc(meta.summary_for_authors);
+  document.getElementById('meta-content').innerHTML=h;
+}
+
+async function runFullReview() {
+  const ld=document.getElementById('loading-review');
+  document.getElementById('loading-text').textContent='Running full review pipeline (Peer + Red Team + Meta)...';
+  ld.classList.add('show');
+  try {
+    const pid=await ensurePaper(); currentPaperId=pid;
+    const data=await apiPost('/api/review/'+encodeURIComponent(pid));
+    document.getElementById('results-card').style.display='block';
+    displayScores(data.peer_review||{});
+    displayRec(data.meta_review?.final_recommendation||data.peer_review?.recommendation);
+    displayMaturity(data.maturity_level||'L0');
+    displayPeer(data.peer_review||{});
+    displayRedTeam(data.redteam||{});
+    displayMeta(data.meta_review||{});
+  } catch(e) { alert('Error: '+e.message); }
+  ld.classList.remove('show');
+}
+
+async function runPeerOnly() {
+  const ld=document.getElementById('loading-review');
+  document.getElementById('loading-text').textContent='Running peer review...';
+  ld.classList.add('show');
+  try {
+    const pid=await ensurePaper(); currentPaperId=pid;
+    const data=await apiPost('/api/review/'+encodeURIComponent(pid)+'/peer');
+    document.getElementById('results-card').style.display='block';
+    displayScores(data.review||{});
+    displayRec(data.review?.recommendation);
+    displayPeer(data.review||{});
+  } catch(e) { alert('Error: '+e.message); }
+  ld.classList.remove('show');
+}
+
+async function runRedTeam() {
+  const ld=document.getElementById('loading-review');
+  document.getElementById('loading-text').textContent='Running red team analysis...';
+  ld.classList.add('show');
+  try {
+    const pid=await ensurePaper(); currentPaperId=pid;
+    const data=await apiPost('/api/review/'+encodeURIComponent(pid)+'/redteam');
+    document.getElementById('results-card').style.display='block';
+    displayRedTeam(data.redteam||{});
+  } catch(e) { alert('Error: '+e.message); }
+  ld.classList.remove('show');
+}
+
+async function requestRevision() {
+  if (!currentPaperId) return alert('No paper selected');
+  document.getElementById('loading-action').classList.add('show');
+  try {
+    const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId));
+    let h='<strong>Revision Suggestions (v'+data.version+')</strong>\n\n';
+    const revs=data.revisions||{};
+    (revs.revision_suggestions||[]).forEach(r=>{
+      h+='['+esc(r.id||'?')+'] ('+esc(r.priority||'?')+')\n';
+      h+='Section: '+esc(r.section||'?')+'\n';
+      h+='Concern: '+esc(r.reviewer_concern||'')+'\n';
+      h+='Revision: '+esc(r.revised_text||'')+'\n\n';
+    });
+    if (revs.revision_letter) h+='\n<strong>Revision Letter</strong>\n'+esc(revs.revision_letter);
+    document.getElementById('action-result').innerHTML=h;
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('loading-action').classList.remove('show');
+}
+
+async function promoteToArena() {
+  if (!currentPaperId) return alert('No paper selected');
+  if (!confirm('Promote this paper to the Arena?')) return;
+  try {
+    const data=await apiPost('/api/promote/'+encodeURIComponent(currentPaperId));
+    document.getElementById('action-result').innerHTML=
+      '<strong>Promoted to Arena!</strong>\nScore: '+data.review_score+'\nMaturity: '+data.maturity_level+'\nBadges: '+(data.badges||[]).join(', ');
+  } catch(e) { alert('Error: '+e.message); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - aiXiv</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.dash-container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
+.dash-hero { text-align: center; margin-bottom: 32px; }
+.dash-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.dash-hero h1 .accent { color: var(--accent); }
+
+/* Stats grid */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+@media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; box-shadow: var(--shadow); }
+.stat-val { font-size: 36px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+/* Pipeline */
+.section-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.pipeline { display: flex; gap: 0; margin-bottom: 32px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.pipe-stage { flex: 1; text-align: center; padding: 16px 8px; background: var(--card-bg); border-right: 1px solid var(--border); position: relative; }
+.pipe-stage:last-child { border-right: none; }
+.pipe-stage::after { content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid var(--border); border-top: 8px solid transparent; border-bottom: 8px solid transparent; z-index: 1; }
+.pipe-stage:last-child::after { display: none; }
+.pipe-count { font-size: 24px; font-weight: 700; }
+.pipe-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.pipe-stage.submitted .pipe-count { color: #757575; }
+.pipe-stage.under_review .pipe-count { color: #f57c00; }
+.pipe-stage.revision .pipe-count { color: #fbc02d; }
+.pipe-stage.accepted .pipe-count { color: #43a047; }
+.pipe-stage.arena .pipe-count { color: #6a1b9a; }
+.pipe-stage.rejected .pipe-count { color: #c62828; }
+
+/* Maturity chart */
+.maturity-chart { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 32px; }
+.maturity-bars { display: flex; gap: 12px; align-items: flex-end; height: 160px; padding-top: 16px; }
+.mat-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.mat-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.3s; min-height: 4px; }
+.mat-bar.l0 { background: #9e9e9e; } .mat-bar.l1 { background: #f57c00; }
+.mat-bar.l2 { background: #fbc02d; } .mat-bar.l3 { background: #43a047; }
+.mat-bar.l4 { background: #1565c0; } .mat-bar.l5 { background: #6a1b9a; }
+.mat-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
+.mat-count { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+
+/* Recent papers table */
+.papers-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.papers-table th { background: var(--code-bg); padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+.papers-table td { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 13px; }
+.status-pill { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+.status-pill.submitted { background: #eeeeee; color: #757575; }
+.status-pill.under_review { background: #fff3e0; color: #f57c00; }
+.status-pill.revision { background: #fff8e1; color: #f57f17; }
+.status-pill.re_review { background: #e3f2fd; color: #1565c0; }
+.status-pill.accepted { background: #e8f5e9; color: #2e7d32; }
+.status-pill.published_arena { background: #f3e5f5; color: #6a1b9a; }
+.status-pill.rejected { background: #ffebee; color: #c62828; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="/">Papers</a>
+      <a href="/scientist">AI Scientist</a>
+      <a href="/writer">Writer</a>
+      <a href="/reviewer">Reviewer</a>
+      <a href="/arena">Arena</a>
+      <a href="/dashboard" class="active">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<main class="dash-container">
+  <div class="dash-hero">
+    <h1><span class="accent">Dashboard</span></h1>
+  </div>
+
+  <!-- Top Stats -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-val" id="s-total">0</div><div class="stat-label">Total Papers</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-reviews">0</div><div class="stat-label">Reviews</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-arena">0</div><div class="stat-label">Arena Papers</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-avg">0</div><div class="stat-label">Arena Avg Score</div></div>
+  </div>
+
+  <!-- Pipeline -->
+  <h3 class="section-title">Paper Pipeline</h3>
+  <div class="pipeline">
+    <div class="pipe-stage submitted"><div class="pipe-count" id="p-submitted">0</div><div class="pipe-label">Submitted</div></div>
+    <div class="pipe-stage under_review"><div class="pipe-count" id="p-under_review">0</div><div class="pipe-label">Under Review</div></div>
+    <div class="pipe-stage revision"><div class="pipe-count" id="p-revision">0</div><div class="pipe-label">Revision</div></div>
+    <div class="pipe-stage accepted"><div class="pipe-count" id="p-accepted">0</div><div class="pipe-label">Accepted</div></div>
+    <div class="pipe-stage arena"><div class="pipe-count" id="p-published_arena">0</div><div class="pipe-label">Arena</div></div>
+    <div class="pipe-stage rejected"><div class="pipe-count" id="p-rejected">0</div><div class="pipe-label">Rejected</div></div>
+  </div>
+
+  <!-- Maturity Distribution -->
+  <h3 class="section-title">Maturity Distribution</h3>
+  <div class="maturity-chart">
+    <div class="maturity-bars" id="maturity-bars"></div>
+  </div>
+
+  <!-- Recent Papers -->
+  <h3 class="section-title">Recent Papers</h3>
+  <table class="papers-table">
+    <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Maturity</th><th>Date</th></tr></thead>
+    <tbody id="papers-body"></tbody>
+  </table>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+
+<script>
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+async function loadDashboard() {
+  try {
+    const [statsResp, papersResp] = await Promise.all([
+      fetch('/api/dashboard'), fetch('/api/papers')
+    ]);
+    const stats = await statsResp.json();
+    const papers = await papersResp.json();
+
+    // Stats
+    document.getElementById('s-total').textContent = stats.total || 0;
+    document.getElementById('s-reviews').textContent = stats.total_reviews || 0;
+    document.getElementById('s-arena').textContent = stats.arena_count || 0;
+    document.getElementById('s-avg').textContent = stats.arena_avg_score || 0;
+
+    // Pipeline
+    ['submitted','under_review','revision','accepted','published_arena','rejected'].forEach(s => {
+      const el = document.getElementById('p-'+s);
+      if (el) el.textContent = stats[s] || 0;
+    });
+
+    // Maturity
+    const md = stats.maturity_distribution || {};
+    const maxVal = Math.max(1, ...Object.values(md));
+    const levels = ['L0','L1','L2','L3','L4','L5'];
+    document.getElementById('maturity-bars').innerHTML = levels.map(l => {
+      const count = md[l] || 0;
+      const height = Math.max(4, (count / maxVal) * 140);
+      return '<div class="mat-bar-wrap"><div class="mat-count">'+count+'</div><div class="mat-bar '+l.toLowerCase()+'" style="height:'+height+'px"></div><div class="mat-label">'+l+'</div></div>';
+    }).join('');
+
+    // Papers table
+    document.getElementById('papers-body').innerHTML = papers.slice(0, 20).map(p => {
+      const status = (p.status||'submitted').replace(/_/g, ' ');
+      return '<tr><td>'+esc(p.paper_id||'')+'</td><td>'+esc((p.title||'').substring(0,60))+'</td>' +
+        '<td><span class="status-pill '+(p.status||'')+'">'+status+'</span></td>' +
+        '<td>'+(p.maturity_level||'L0')+'</td><td>'+esc((p.created_at||'').substring(0,10))+'</td></tr>';
+    }).join('');
+  } catch(e) { console.error('Dashboard load error:', e); }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
