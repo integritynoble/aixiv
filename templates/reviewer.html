@@ -64,6 +64,22 @@
 .finding-sev.suggestion { background: #e8f5e9; color: #2e7d32; }
 
 .result-text { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+
+.rev-item { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.rev-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--code-bg); font-size: 13px; }
+.rev-header input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.rev-id { font-weight: 700; color: var(--accent); }
+.rev-priority { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 8px; }
+.rev-priority.required { background: #ffebee; color: #c62828; }
+.rev-priority.suggested { background: #e3f2fd; color: #1565c0; }
+.rev-section { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.rev-body { padding: 12px 14px; font-size: 13px; line-height: 1.6; }
+.rev-concern { color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+.diff-view { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.diff-old, .diff-new { padding: 8px 12px; border-radius: 4px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.diff-old { background: #ffebee; border-left: 3px solid #c62828; }
+.diff-new { background: #e8f5e9; border-left: 3px solid #2e7d32; }
+.diff-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: var(--text-muted); }
 .loading { display: none; align-items: center; gap: 8px; padding: 12px; color: var(--text-muted); font-size: 14px; }
 .loading.show { display: flex; }
 .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -141,6 +157,14 @@
             <button class="btn-outline" onclick="promoteToArena()">Promote to Arena</button>
           </div>
           <div class="loading" id="loading-action"><div class="spinner"></div> Processing...</div>
+          <div id="revisions-panel" style="display:none;margin-top:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h4 style="margin:0">Revision Suggestions</h4>
+              <button class="btn-primary" onclick="applySelectedRevisions()" id="btn-apply-revisions" style="font-size:12px;padding:6px 16px">Apply Selected</button>
+            </div>
+            <div id="revisions-list"></div>
+            <div class="result-text" id="apply-result" style="margin-top:12px"></div>
+          </div>
           <div class="result-text" id="action-result" style="margin-top:16px"></div>
           <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
             <h4 style="margin-bottom:8px">Author Response</h4>
@@ -364,21 +388,68 @@ async function runRedTeam() {
   ld.classList.remove('show');
 }
 
+let currentRevisions = [];
+
 async function requestRevision() {
   if (!currentPaperId) return alert('No paper selected');
   document.getElementById('loading-action').classList.add('show');
   try {
     const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId));
-    let h='<strong>Revision Suggestions (v'+data.version+')</strong>\n\n';
     const revs=data.revisions||{};
-    (revs.revision_suggestions||[]).forEach(r=>{
-      h+='['+esc(r.id||'?')+'] ('+esc(r.priority||'?')+')\n';
-      h+='Section: '+esc(r.section||'?')+'\n';
-      h+='Concern: '+esc(r.reviewer_concern||'')+'\n';
-      h+='Revision: '+esc(r.revised_text||'')+'\n\n';
+    currentRevisions = revs.revision_suggestions||[];
+
+    if (currentRevisions.length) {
+      let h='';
+      currentRevisions.forEach((r,i)=>{
+        const priCls=(r.priority||'suggested')==='required'?'required':'suggested';
+        h+='<div class="rev-item">';
+        h+='<div class="rev-header">';
+        h+='<input type="checkbox" checked data-rev-id="'+esc(r.id||'REV-'+(i+1))+'" class="rev-cb">';
+        h+='<span class="rev-id">'+esc(r.id||'REV-'+(i+1))+'</span>';
+        h+='<span class="rev-priority '+priCls+'">'+esc(r.priority||'suggested')+'</span>';
+        h+='<span class="rev-section">'+esc(r.section||'')+'</span>';
+        h+='</div>';
+        h+='<div class="rev-body">';
+        if(r.reviewer_concern) h+='<div class="rev-concern">'+esc(r.reviewer_concern)+'</div>';
+        if(r.original_text||r.revised_text) {
+          h+='<div class="diff-view">';
+          h+='<div><div class="diff-label">Original</div><div class="diff-old">'+esc(r.original_text||'(no original)')+'</div></div>';
+          h+='<div><div class="diff-label">Revised</div><div class="diff-new">'+esc(r.revised_text||'(no revision)')+'</div></div>';
+          h+='</div>';
+        }
+        if(r.explanation) h+='<div style="margin-top:8px;font-size:12px;color:#2e7d32"><strong>Why:</strong> '+esc(r.explanation)+'</div>';
+        h+='</div></div>';
+      });
+      document.getElementById('revisions-list').innerHTML=h;
+      document.getElementById('revisions-panel').style.display='block';
+    }
+
+    if (revs.revision_letter) {
+      document.getElementById('action-result').innerHTML='<strong>Revision Letter</strong>\n'+esc(revs.revision_letter);
+    }
+  } catch(e) { alert('Error: '+e.message); }
+  document.getElementById('loading-action').classList.remove('show');
+}
+
+async function applySelectedRevisions() {
+  if (!currentPaperId) return alert('No paper selected');
+  const cbs=document.querySelectorAll('.rev-cb');
+  const accepted=[], rejected=[];
+  cbs.forEach(cb=>{
+    if(cb.checked) accepted.push(cb.dataset.revId);
+    else rejected.push(cb.dataset.revId);
+  });
+  if(!accepted.length) return alert('No revisions selected');
+  if(!confirm('Apply '+accepted.length+' revision(s) to the paper?')) return;
+  document.getElementById('loading-action').classList.add('show');
+  try {
+    const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId)+'/apply',{
+      accepted_ids:accepted, rejected_ids:rejected
     });
-    if (revs.revision_letter) h+='\n<strong>Revision Letter</strong>\n'+esc(revs.revision_letter);
-    document.getElementById('action-result').innerHTML=h;
+    document.getElementById('apply-result').innerHTML=
+      '<strong>Applied '+data.applied.length+' revision(s) (v'+data.version+')</strong>\n'+
+      'Rejected: '+(data.rejected.length||'none')+'\n\n'+
+      '<strong>Preview:</strong>\n'+esc(data.revised_text_preview||'');
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('loading-action').classList.remove('show');
 }

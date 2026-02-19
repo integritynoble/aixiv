@@ -347,6 +347,85 @@ async def submit_revision(paper_id: str, request: Request):
     return JSONResponse({"paper_id": paper_id, "status": "re_review", "version": new_version})
 
 
+@app.post("/api/revise/{paper_id}/apply")
+async def apply_selected_revisions(paper_id: str, request: Request):
+    """Apply selected revision suggestions to the paper.
+
+    Request body: {
+        "accepted_ids": ["REV-001", "REV-003"],
+        "rejected_ids": ["REV-002"]
+    }
+    """
+    from agents.revision_agent import apply_revisions
+    data = await request.json()
+    accepted_ids = set(data.get("accepted_ids", []))
+    rejected_ids = set(data.get("rejected_ids", []))
+
+    if not accepted_ids:
+        raise HTTPException(400, "No revisions accepted")
+
+    conn = get_db()
+    paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+    if not paper:
+        conn.close()
+        raise HTTPException(404, "Paper not found")
+
+    # Get latest revision suggestions
+    rev_row = conn.execute(
+        "SELECT * FROM revisions WHERE paper_id = ? ORDER BY version DESC LIMIT 1",
+        (paper_id,)
+    ).fetchone()
+    if not rev_row:
+        conn.close()
+        raise HTTPException(400, "No revision suggestions found")
+
+    try:
+        suggestions = json.loads(rev_row["changes_summary"])
+    except (json.JSONDecodeError, TypeError):
+        suggestions = []
+
+    # If suggestions is a dict with revision_suggestions key, unwrap
+    if isinstance(suggestions, dict) and "revision_suggestions" in suggestions:
+        suggestions = suggestions["revision_suggestions"]
+
+    accepted = [s for s in suggestions if isinstance(s, dict) and s.get("id") in accepted_ids]
+    if not accepted:
+        conn.close()
+        raise HTTPException(400, "None of the accepted IDs match revision suggestions")
+
+    paper_text = paper["full_text"] or paper["abstract"]
+    try:
+        revised = apply_revisions(paper_text, accepted)
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Failed to apply revisions: {str(e)}")
+
+    now = datetime.utcnow().isoformat()
+    new_version = (paper["version"] or 1) + 1
+    conn.execute("""
+        UPDATE papers SET full_text = ?, version = ?, updated_at = ? WHERE paper_id = ?
+    """, (revised, new_version, now, paper_id))
+
+    conn.execute("""
+        INSERT INTO revisions (paper_id, version, changes_summary, revision_letter,
+                              revised_text, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 'applied', ?)
+    """, (paper_id, new_version,
+          json.dumps({"accepted": list(accepted_ids), "rejected": list(rejected_ids)}),
+          f"Applied {len(accepted_ids)} revisions, rejected {len(rejected_ids)}",
+          revised[:2000], now))
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({
+        "paper_id": paper_id,
+        "version": new_version,
+        "applied": list(accepted_ids),
+        "rejected": list(rejected_ids),
+        "revised_text_preview": revised[:500],
+    })
+
+
 # ═══════════════════════════════════════════════════════════════════
 # API: Rail Evaluation
 # ═══════════════════════════════════════════════════════════════════

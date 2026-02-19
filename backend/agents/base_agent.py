@@ -1,14 +1,22 @@
-"""Base agent with shared LLM calling, streaming, and error handling."""
+"""Base agent with shared LLM calling, streaming, error handling, and retry logic."""
 import os
 import json
 import time
 import hashlib
-from anthropic import Anthropic
+import logging
+from anthropic import Anthropic, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
+
+logger = logging.getLogger("ai_scientist")
 
 _client = None
 
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 STRONG_MODEL = "claude-opus-4-20250514"
+
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 2  # seconds
+RETRY_MAX_DELAY = 30  # seconds
+LLM_TIMEOUT = 120  # seconds
 
 
 def get_client():
@@ -17,33 +25,69 @@ def get_client():
         api_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        _client = Anthropic(api_key=api_key)
+        _client = Anthropic(api_key=api_key, timeout=LLM_TIMEOUT)
     return _client
 
 
+def _retry_with_backoff(fn, max_retries=MAX_RETRIES):
+    """Execute fn with exponential backoff retry on transient errors."""
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            return fn()
+        except RateLimitError as e:
+            last_error = e
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
+            logger.warning(f"Rate limited (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
+            time.sleep(delay)
+        except (APITimeoutError, APIConnectionError) as e:
+            last_error = e
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
+            logger.warning(f"API error: {e} (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
+            time.sleep(delay)
+        except APIStatusError as e:
+            if e.status_code >= 500:
+                last_error = e
+                delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
+                logger.warning(f"Server error {e.status_code} (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
+                time.sleep(delay)
+            else:
+                raise
+    raise last_error
+
+
 def call_llm(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
-    """Call Claude API and return the text response."""
+    """Call Claude API with retry logic and return the text response."""
     c = get_client()
-    response = c.messages.create(
-        model=model or DEFAULT_MODEL,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system_prompt,
-        messages=messages,
-    )
-    return response.content[0].text
+
+    def _call():
+        response = c.messages.create(
+            model=model or DEFAULT_MODEL,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_prompt,
+            messages=messages,
+        )
+        return response.content[0].text
+
+    return _retry_with_backoff(_call)
 
 
 def call_llm_stream(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
-    """Call Claude API with streaming, yielding text chunks."""
+    """Call Claude API with streaming and retry on initial connection, yielding text chunks."""
     c = get_client()
-    with c.messages.stream(
-        model=model or DEFAULT_MODEL,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system_prompt,
-        messages=messages,
-    ) as stream:
+
+    def _create_stream():
+        return c.messages.stream(
+            model=model or DEFAULT_MODEL,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system_prompt,
+            messages=messages,
+        )
+
+    stream_ctx = _retry_with_backoff(_create_stream)
+    with stream_ctx as stream:
         for text in stream.text_stream:
             yield text
 

@@ -33,6 +33,8 @@
 .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
 .btn-primary:hover { opacity: 0.9; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { background: white; color: var(--accent); border: 1px solid var(--accent); padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-outline:hover { background: var(--accent); color: white; }
 .btn-row { display: flex; gap: 12px; margin-top: 16px; }
 
 .result-box { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 16px; margin-top: 16px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
@@ -86,6 +88,20 @@
     <div class="step-item" onclick="showPanel('method')" id="step-method"><span class="step-num">3</span> Methods</div>
     <div class="step-item" onclick="showPanel('compose')" id="step-compose"><span class="step-num">4</span> Compose</div>
     <div class="step-item" onclick="showPanel('chat')" id="step-chat"><span class="step-num">&#9998;</span> Chat</div>
+  </div>
+
+  <!-- Session Resume -->
+  <div id="session-resume" class="panel-card" style="display:none;margin-bottom:20px;border-left:4px solid var(--accent)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h3 style="margin-bottom:4px;font-size:15px">Resume Previous Session</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin:0" id="resume-info"></p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" onclick="resumeSession()" style="font-size:12px;padding:6px 16px">Resume</button>
+        <button class="btn-outline" onclick="clearSavedSession()" style="font-size:12px;padding:6px 16px">New Session</button>
+      </div>
+    </div>
   </div>
 
   <!-- Idea -->
@@ -175,6 +191,84 @@
 let sessionId = '';
 let chatSessionId = '';
 
+// Session persistence
+function saveSession() {
+  if (!sessionId) return;
+  const data = {
+    sessionId,
+    timestamp: new Date().toISOString(),
+    step: document.querySelector('.step-item.completed:last-of-type')?.id?.replace('step-','') || 'idea',
+  };
+  localStorage.setItem('aixiv_writer_session', JSON.stringify(data));
+}
+
+function checkSavedSession() {
+  try {
+    const raw = localStorage.getItem('aixiv_writer_session');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data.sessionId) return;
+    const age = (Date.now() - new Date(data.timestamp).getTime()) / (1000*60*60);
+    if (age > 48) { localStorage.removeItem('aixiv_writer_session'); return; }
+    document.getElementById('resume-info').textContent =
+      'Session from ' + new Date(data.timestamp).toLocaleString() + ' (step: ' + (data.step||'idea') + ')';
+    document.getElementById('session-resume').style.display = 'block';
+  } catch(e) {}
+}
+
+async function resumeSession() {
+  try {
+    const data = JSON.parse(localStorage.getItem('aixiv_writer_session'));
+    if (!data?.sessionId) return;
+    const resp = await fetch('/api/write/session/'+encodeURIComponent(data.sessionId));
+    if (!resp.ok) { alert('Session not found on server'); clearSavedSession(); return; }
+    const sess = await resp.json();
+    sessionId = data.sessionId;
+
+    // Restore state based on session step
+    if (sess.idea) {
+      const idea = typeof sess.idea === 'string' ? JSON.parse(sess.idea) : sess.idea;
+      document.getElementById('idea-topic').value = idea.description || '';
+      let h = '<h4>Selected Idea</h4><strong>' + esc(idea.title||'') + '</strong>\n\n' + esc(idea.description||'');
+      document.getElementById('result-idea').innerHTML = h;
+      document.getElementById('result-idea').style.display = 'block';
+      document.getElementById('novelty-text').value = (idea.title||'')+': '+(idea.description||'');
+      markCompleted('idea');
+    }
+    if (sess.current_step === 'novelty' || sess.current_step === 'method' || sess.current_step === 'compose') {
+      markCompleted('novelty');
+    }
+    if (sess.current_step === 'method' || sess.current_step === 'compose') {
+      if (sess.methodology) {
+        document.getElementById('result-method').innerHTML = '<h4>Refined Methodology</h4>\n'+esc(sess.methodology);
+        document.getElementById('result-method').style.display = 'block';
+      }
+      markCompleted('method');
+    }
+    if (sess.current_step === 'compose' && sess.current_content) {
+      document.getElementById('result-compose').innerHTML = '<h4>Full Paper</h4>\n'+esc(sess.current_content);
+      document.getElementById('result-compose').style.display = 'block';
+      document.getElementById('export-row').style.display = 'flex';
+      markCompleted('compose');
+    }
+
+    // Show the appropriate panel
+    const stepToShow = sess.current_step || 'idea';
+    const nextStep = {'idea':'novelty','novelty':'method','method':'compose','compose':'chat'}[stepToShow] || stepToShow;
+    showPanel(nextStep);
+
+    document.getElementById('session-resume').style.display = 'none';
+  } catch(e) { alert('Failed to resume: '+e.message); }
+}
+
+function clearSavedSession() {
+  localStorage.removeItem('aixiv_writer_session');
+  document.getElementById('session-resume').style.display = 'none';
+  sessionId = '';
+}
+
+checkSavedSession();
+
 function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
@@ -210,6 +304,7 @@ async function generateIdea() {
     document.getElementById('result-idea').style.display = 'block';
     document.getElementById('novelty-text').value = (idea.title||'')+': '+(idea.description||'');
     markCompleted('idea');
+    saveSession();
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('btn-idea').disabled = false;
   document.getElementById('loading-idea').classList.remove('show');
@@ -240,6 +335,7 @@ async function checkNovelty() {
     document.getElementById('result-novelty').innerHTML = h;
     document.getElementById('result-novelty').style.display = 'block';
     markCompleted('novelty');
+    saveSession();
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('btn-novelty').disabled = false;
   document.getElementById('loading-novelty').classList.remove('show');
@@ -256,6 +352,7 @@ async function generateMethod() {
     document.getElementById('result-method').innerHTML = h;
     document.getElementById('result-method').style.display = 'block';
     markCompleted('method');
+    saveSession();
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('btn-method').disabled = false;
   document.getElementById('loading-method').classList.remove('show');
@@ -272,6 +369,7 @@ async function composePaper() {
     document.getElementById('result-compose').style.display = 'block';
     document.getElementById('export-row').style.display = 'flex';
     markCompleted('compose');
+    saveSession();
   } catch(e) { alert('Error: '+e.message); }
   document.getElementById('btn-compose').disabled = false;
   document.getElementById('loading-compose').classList.remove('show');
