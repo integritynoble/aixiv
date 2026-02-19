@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rail for Computational Imaging: A Physics World Model for Industrializing Image Reconstruction - aiXiv</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="index.html">Papers</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="paper-detail-wrapper">
+    <div class="paper-detail">
+      <div class="paper-id">aiXiv:2502.002</div>
+      <h1 class="paper-title">The Rail for Computational Imaging: A Physics World Model for Industrializing Image Reconstruction</h1>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="affiliation">NextGen PlatformAI C Corp (integrityyang@gmail.com)</div>
+      <div class="paper-meta">
+        <span class="category cat-physics">physics.comp-img</span>
+        <span class="category cat-cs">cs.CV</span>
+      </div>
+      <div class="detail-meta">
+        <div><dt>Submitted</dt><dd>February 2026</dd></div>
+        <div><dt>Paper ID</dt><dd>aiXiv:2502.002</dd></div>
+      </div>
+      <div class="abstract-label">Abstract</div>
+      <p class="abstract-text">The computational imaging community has built increasingly powerful reconstruction algorithms, yet real-world deployments routinely fail. We show that a 5-parameter sub-pixel operator mismatch -- well within manufacturing tolerances -- degrades the state-of-the-art CASSI transformer (MST-L) by 13.98 dB, erasing years of algorithmic progress. This paper argues that the bottleneck is not the solver but the infrastructure around it: evaluation protocols, physics representations, calibration pipelines, and benchmarks. Drawing on the SolveEverything.org framework, we present the Physics World Model (PWM) as the "rail" for computational imaging -- a standardized evaluation harness comprising: (i) OperatorGraph intermediate representation (IR), a universal DAG representation spanning 64 modalities across 5 physical carriers with 89 validated templates; (ii) a 4-scenario evaluation protocol separating solver quality from operator fidelity; (iii) the Leaderboard for Imaging Physics (LIP-Arena), a prospective Commit-Measure-Score competition eliminating benchmark overfitting; and (iv) a Red Team adversarial verification module. Across a 26-modality benchmark, we demonstrate that operator correction improves reconstruction by +0.54 to +48.25 dB across 9 correction configurations spanning 7 distinct modalities, with mismatch (Gate 3) identified as the binding constraint in every modality tested. PWM provides the infrastructure to move computational imaging from artisanal practice to industrial standardization.</p>
+      <div class="keywords"><strong>Keywords:</strong> Computational imaging, Infrastructure, Evaluation protocol, Benchmarking, Physics world model</div>
+      <a href="index.html" class="back-link">&larr; Back to all papers</a>
+    </div>
+    <aside class="access-sidebar">
+      <div class="access-panel">
+        <div class="access-panel-label">Access Paper:</div>
+        <div class="access-panel-links">
+          <a href="papers/rail.pdf" target="_blank">
+            <span class="access-icon access-icon-pdf">PDF</span>
+            <span class="access-text">View PDF</span>
+          </a>
+          <a href="html_papers/rail.html">
+            <span class="access-icon access-icon-html">HTML</span>
+            <span class="access-text">HTML<small>(experimental)</small></span>
+          </a>
+          <a href="tex_source/rail.tar.gz">
+            <span class="access-icon access-icon-tex">TeX</span>
+            <span class="access-text">TeX Source</span>
+          </a>
+        </div>
+        <div class="access-panel-extra">
+          <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">Source Code</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>

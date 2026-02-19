@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Differentiable Operator Calibration for CASSI - aiXiv HTML</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="../index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="../index.html">Papers</a>
+      <a href="../about.html">About</a>
+      <a href="../submit.html">Submit</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="paper-html-view">
+    <div class="access-banner">
+      <span>Access Paper:</span>
+      <a href="../papers/cassi_calibration.pdf" target="_blank">View PDF</a>
+      <span class="current">HTML (experimental)</span>
+      <a href="../tex_source/cassi_calibration.tar.gz">TeX Source</a>
+      <span style="margin-left:auto"><a href="../paper_cassi_calibration.html">&larr; Back to abstract</a></span>
+    </div>
+
+    <h1>Differentiable Operator Calibration for Coded Aperture Snapshot Spectral Imaging</h1>
+    <div class="authors">Chengshuai Yang</div>
+    <div class="affiliation">NextGen PlatformAI C Corp</div>
+
+    <div class="abstract-box">
+      <strong>Abstract.</strong>
+      <p>Coded aperture snapshot spectral imaging (CASSI) acquires hyperspectral data cubes in a single shot but requires accurate knowledge of the forward measurement operator -- the coded aperture mask position, orientation, and dispersive element parameters -- for high-quality reconstruction. In practice, manufacturing tolerances and assembly drift introduce operator mismatch that degrades reconstruction by 10-17 dB. We present a differentiable calibration framework that models CASSI mismatch as a 6-parameter perturbation (spatial shift, rotation, dispersion slope and axis angle) and recovers these parameters through a two-stage pipeline: (1) a hierarchical beam search over a coarse parameter grid (~38 s/scene), followed by (2) a joint gradient refinement using differentiable PyTorch modules -- including a straight-through estimator for integer dispersion offsets and an unrolled GAP-TV solver with gradient checkpointing (~366 s/scene). Central to our approach is an enlarged grid forward model with 4x spatial and 2x spectral oversampling (217 bands), providing sub-pixel sensitivity to mismatch parameters. Validated on 10 KAIST hyperspectral scenes under a three-scenario protocol, our method achieves a calibration gain of +5.06 dB, recovering 30% of the 16.60 dB mismatch loss. When combined with oracle correction using mask-aware deep networks (MST-L), the recovery reaches +7.99 dB (75.5% of mismatch loss), demonstrating the synergy between calibration and learned reconstruction.</p>
+    </div>
+    <div class="keywords"><strong>Keywords:</strong> CASSI, Operator calibration, Differentiable programming, Hyperspectral imaging, Mismatch correction, Computational imaging</div>
+
+    <!-- 1. Introduction -->
+    <h2>1. Introduction</h2>
+    <p>Coded aperture snapshot spectral imaging (CASSI) acquires a three-dimensional hyperspectral data cube from a single two-dimensional measurement by encoding spectral information through a binary coded aperture followed by a dispersive prism. Computational reconstruction algorithms then recover the hyperspectral cube from this compressed measurement.</p>
+    <p>The quality of CASSI reconstruction depends critically on accurate knowledge of the forward measurement operator -- the mapping from scene to measurement defined by the coded aperture mask position, orientation, and dispersive element parameters. In practice, the assumed operator inevitably differs from the true physical operator due to manufacturing tolerances, mechanical assembly errors, thermal drift, and optical alignment imprecision. Even moderate misalignment -- 0.5 pixels of mask shift and 0.1 degrees of rotation -- can degrade peak signal-to-noise ratio (PSNR) by over 10 dB, erasing the quality advantage of state-of-the-art deep learning reconstruction methods. As demonstrated by the InverseNet benchmark, operator mismatch reduces all deep learning methods to a narrow 24-25 dB performance band regardless of their 10+ dB spread under ideal conditions.</p>
+    <p>Current CASSI calibration approaches are predominantly offline procedures requiring dedicated calibration targets and manual alignment. These methods cannot adapt to in-situ drift and do not provide a differentiable framework suitable for gradient-based optimization.</p>
+    <p><strong>Contributions.</strong> We address this gap with three contributions: (1) Enlarged grid forward model with 6-parameter mismatch -- a high-fidelity CASSI forward model with N=4 spatial oversampling and K=2 spectral oversampling (expanding 28 bands to 217), enabling sub-pixel sensitivity; (2) Two-stage calibration pipeline -- coarse-to-fine strategy: Algorithm 1 performs hierarchical beam search (~38 s/scene), Algorithm 2 refines through joint gradient descent using differentiable PyTorch modules (~366 s/scene); (3) Differentiable CASSI modules -- four PyTorch modules: RoundSTE, DifferentiableMaskWarp, DifferentiableCassiForward/Adjoint, and DifferentiableGAPTV.</p>
+
+    <!-- 2. Related Work -->
+    <h2>2. Related Work</h2>
+    <p><strong>CASSI systems and forward models.</strong> CASSI was introduced by Wagadarikar et al. as a snapshot spectral imager using a binary coded aperture and dispersive prism. The standard forward model assumes a perfectly aligned mask with known dispersion, discretized at the detector pixel pitch. Higher-order models incorporating sub-pixel effects were proposed but without differentiable implementations.</p>
+    <p><strong>Calibration in computational imaging.</strong> Calibration has traditionally relied on offline procedures with dedicated targets. For MRI, coil sensitivity calibration and trajectory correction are standard preprocessing steps. These approaches are modality-specific and do not provide a unified differentiable framework.</p>
+    <p><strong>Differentiable programming for inverse problems.</strong> Deep unrolling replaces iterative algorithm steps with learnable modules, enabling end-to-end training. The straight-through estimator (STE) enables gradient flow through discrete operations. Our work applies STE to integer dispersion offsets in CASSI, enabling gradient-based calibration of inherently discrete parameters.</p>
+
+    <!-- 3. CASSI Forward Model with Mismatch -->
+    <h2>3. CASSI Forward Model with Mismatch</h2>
+    <h3>3.1 Standard CASSI Forward Model</h3>
+    <p>The standard single-disperser CASSI acquires a 2D measurement through a coded aperture mask followed by a dispersive prism. The measurement at pixel (i, j) is the sum over all spectral bands of the mask-modulated, spectrally-dispersed scene plus noise.</p>
+    <h3>3.2 Six-Parameter Mismatch Model</h3>
+    <p>We model CASSI operator mismatch as a 6-parameter perturbation organized into three groups:</p>
+    <p><strong>Group 1: Mask affine transform (dx, dy, theta).</strong> The coded aperture mask undergoes spatial shift and rotation due to mechanical assembly tolerances. Typical ranges: dx, dy in [-3, 3] px, theta in [-1, 1] degrees.</p>
+    <p><strong>Group 2: Dispersion parameters (a1, alpha).</strong> Thermal drift and prism settling cause the dispersion slope a1 and axis angle alpha to deviate from nominal values. Typical ranges: a1 in [1.95, 2.05], alpha in [-1, 1] degrees.</p>
+    <p><strong>Group 3: PSF blur (sigma).</strong> Optional Gaussian PSF blur from lens misalignment, with sigma in [0.5, 2.0] px. We find this parameter has low impact (&lt;0.1 dB) and do not actively correct it.</p>
+    <h3>3.3 Enlarged Grid Forward Model</h3>
+    <p>To achieve sub-pixel sensitivity, we introduce an enlarged grid forward model with spatial oversampling factor N=4 and spectral oversampling factor K=2: the scene and mask are upsampled from 256 to 1024, the 28 bands are interpolated to 217 bands, stride-1 dispersion is used in the enlarged space, and the enlarged measurement is block-averaged back to native resolution. This provides 4x sub-pixel spatial resolution for mismatch parameter sensitivity.</p>
+
+    <!-- 4. Calibration Algorithms -->
+    <h2>4. Calibration Algorithms</h2>
+    <h3>4.1 Algorithm 1: Hierarchical Beam Search</h3>
+    <p>Algorithm 1 performs coarse parameter estimation through discrete grid search. A coarse 3D grid evaluates 567 candidates over (dx, dy, theta). Top-k candidates are selected by reconstruction PSNR. A fine 3D beam search refines around each top candidate, followed by 2D beam search over dispersion (a1, alpha), and 3 rounds of coordinate descent. Complexity: ~38 s/scene.</p>
+    <h3>4.2 Algorithm 2: Joint Gradient Refinement</h3>
+    <p>Algorithm 2 refines the coarse estimate using gradient-based optimization with differentiable CASSI modules. Five stages: Stage 0 (Coarse GPU grid, ~85 s), Stage 1 (Fine GPU grid, ~88 s), Stage 2A (Gradient dx, ~61 s), Stage 2B (Gradient dy and theta, ~74 s), Stage 2C (Joint refinement, ~128 s). The staged approach addresses parameter coupling: dx is refined first (strongest gradient signal), followed by the coupled pair (dy, theta), then joint refinement. Total complexity: ~366 s/scene.</p>
+    <h3>4.3 Differentiable Modules</h3>
+    <p><strong>RoundSTE:</strong> Straight-through estimator for integer offsets -- rounds in the forward pass, passes gradients through unchanged in the backward pass.</p>
+    <p><strong>DifferentiableMaskWarp:</strong> Affine mask warping using PyTorch's F.affine_grid and F.grid_sample. The critical sign convention matches scipy.ndimage.affine_transform exactly: tx = -2*dx/W, ty = -2*dy/H.</p>
+    <p><strong>DifferentiableCassiForward/Adjoint:</strong> The forward operator applies the warped mask with RoundSTE dispersion offsets. The adjoint distributes the measurement residual back to the spectral cube.</p>
+    <p><strong>DifferentiableGAPTV:</strong> Unrolled K iterations of GAP-TV with gradient checkpointing, storing only every 4th intermediate state and recomputing others during backpropagation.</p>
+
+    <!-- 5. Experimental Results -->
+    <h2>5. Experimental Results</h2>
+    <h3>5.1 Experimental Setup</h3>
+    <p>10 scenes from the KAIST TSA dataset (256 x 256 x 28). For each scene, mismatch parameters are randomly sampled: dx in [-3, 3] px, dy in [-3, 3] px, theta in [-1, 1] degrees, a1 in [1.95, 2.05], alpha in [-1, 1] degrees. Noise: Poisson (alpha = 10^5) + Gaussian (sigma = 0.01).</p>
+    <h3>5.2 Three-Scenario Calibration Results</h3>
+    <p>Operator mismatch causes a devastating 16.60 dB degradation (Scenario I: 40.03 dB to Scenario II: 23.43 dB). Our calibration pipeline recovers 5.06 dB, bringing Scenario III to 28.50 dB. The residual 11.53 dB gap is solver-limited rather than parameter-limited -- all 10 scenes converge to dx approximately 0, dy approximately 0, theta approximately 0 after Algorithm 2, indicating successful parameter recovery. The standard deviation across scenes is remarkably low (&lt;0.01 dB), demonstrating consistent performance regardless of randomly injected mismatch parameters.</p>
+    <h3>5.3 Per-Scene Results</h3>
+    <p>All scenes achieve virtually identical calibration gains (5.05-5.07 dB) despite widely varying mismatch configurations, including extreme cases (Scene 8: dy = -3.5 px, Scene 4: theta = 1.1 degrees). Algorithm 2 consistently converges to the true parameter values across all scenes. Mean processing time per scene: 418 s (approximately 7 minutes).</p>
+    <h3>5.4 Multi-Method Oracle Comparison</h3>
+    <p>MST-L achieves the highest oracle recovery of +7.99 dB (rho = 75.5%), demonstrating that mask-aware deep networks are ideally suited to benefit from calibration. HDNet shows zero recovery (rho = 0%) because its mask-oblivious architecture cannot incorporate corrected operator information. GAP-TV shows negligible mismatch sensitivity (degradation = 0.08 dB) because its low reconstruction ceiling is dominated by regularization-induced smoothing rather than operator errors.</p>
+    <h3>5.5 Analysis</h3>
+    <p><strong>Calibration gain decomposition.</strong> Our Algorithm 1+2 pipeline achieves +5.06 dB calibration gain using GAP-TV as the internal solver. Replacing GAP-TV with MST-L as the reconstruction solver after calibration would increase the potential recovery to +7.99 dB.</p>
+    <p><strong>Algorithm 1 vs. Algorithm 2.</strong> Algorithm 1 provides a coarse estimate in ~38 s/scene, suitable for real-time applications. Algorithm 2 refines using GPU-accelerated gradient descent in ~366 s/scene, achieving 3-5x accuracy improvement. The 50x GPU speedup for differentiable GAP-TV evaluation (0.1 s vs. 5 s per evaluation) is critical.</p>
+
+    <!-- 6. Discussion -->
+    <h2>6. Discussion</h2>
+    <p><strong>Residual gap analysis.</strong> The 11.53 dB residual gap persists despite complete parameter recovery and is attributable to the GAP-TV solver's limited reconstruction quality. Under ideal conditions, GAP-TV achieves 40.03 dB (well above its typical ~20 dB on realistic noise levels) because our experimental design uses extremely low noise to isolate the mismatch effect.</p>
+    <p><strong>Classical vs. learned reconstruction.</strong> Our results reveal a fundamental tension between reconstruction quality and calibration sensitivity. GAP-TV is robust to mismatch (0.08 dB degradation) but achieves low ideal quality. MST-L achieves high ideal quality (34.81 dB) but is extremely sensitive to mismatch (10.58 dB degradation). Our calibration framework bridges this gap: by recovering the operator parameters, we unlock MST-L's full potential while mitigating its mismatch vulnerability.</p>
+    <p><strong>Forward model fidelity.</strong> The enlarged grid model (N=4, K=2, 217 bands) is more computationally expensive than the standard CASSI model but provides critical sub-pixel sensitivity. At native resolution, the forward model cannot distinguish sub-pixel mask shifts, limiting calibration accuracy.</p>
+    <p><strong>Limitations.</strong> Our current implementation calibrates spatial mismatch parameters effectively but treats dispersion parameters as secondary. The validation uses synthesized mismatch on the KAIST simulation dataset; real-world systems may exhibit additional degradation modes not captured by our 6-parameter model.</p>
+
+    <!-- 7. Conclusion -->
+    <h2>7. Conclusion</h2>
+    <p>We have presented the first differentiable calibration framework for CASSI operator mismatch correction. Our two-stage pipeline -- hierarchical beam search for coarse estimation (~38 s) followed by GPU-accelerated joint gradient refinement (~366 s) -- achieves a calibration gain of +5.06 dB on 10 KAIST hyperspectral scenes, recovering 30% of the 16.60 dB mismatch degradation. The key enabling components are an enlarged grid forward model (4x spatial, 2x spectral oversampling, 217 bands) and four differentiable PyTorch modules that provide gradient flow through the inherently discrete CASSI measurement process.</p>
+    <p>Our calibration framework complements the InverseNet benchmark finding that mask-aware deep networks (MST-L) can recover up to 75.5% of mismatch losses when given the true operator. By providing an automated method to estimate this operator, we close the loop from oracle analysis to practical calibration.</p>
+    <p><strong>Future work.</strong> Three directions are particularly promising: (1) integrating MST-L as a differentiable solver within Algorithm 2; (2) extending the mismatch model to capture non-parametric degradations; (3) joint calibration and reconstruction training.</p>
+
+  </div>
+</main>
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>

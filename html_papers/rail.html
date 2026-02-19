@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rail for Computational Imaging - aiXiv HTML</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="../index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="../index.html">Papers</a>
+      <a href="../about.html">About</a>
+      <a href="../submit.html">Submit</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="paper-html-view">
+    <div class="access-banner">
+      <span>Access Paper:</span>
+      <a href="../papers/rail.pdf" target="_blank">View PDF</a>
+      <span class="current">HTML (experimental)</span>
+      <a href="../tex_source/rail.tar.gz">TeX Source</a>
+      <span style="margin-left:auto"><a href="../paper_rail.html">&larr; Back to abstract</a></span>
+    </div>
+
+    <h1>The Rail for Computational Imaging: A Physics World Model for Industrializing Image Reconstruction</h1>
+    <div class="authors">Chengshuai Yang</div>
+    <div class="affiliation">NextGen PlatformAI C Corp</div>
+
+    <div class="abstract-box">
+      <strong>Abstract.</strong>
+      <p>The computational imaging community has built increasingly powerful reconstruction algorithms, yet real-world deployments routinely fail. We show that a 5-parameter sub-pixel operator mismatch -- well within manufacturing tolerances -- degrades the state-of-the-art CASSI transformer (MST-L) by 13.98 dB, erasing years of algorithmic progress. This paper argues that the bottleneck is not the solver but the infrastructure around it: evaluation protocols, physics representations, calibration pipelines, and benchmarks. Drawing on the SolveEverything.org framework, we present the <strong>Physics World Model (PWM)</strong> as the "rail" for computational imaging -- a standardized evaluation harness comprising: (i) OperatorGraph intermediate representation (IR), a universal directed acyclic graph (DAG) representation spanning 64 modalities across 5 physical carriers with 89 validated templates; (ii) a 4-scenario evaluation protocol separating solver quality from operator fidelity; (iii) the Leaderboard for Imaging Physics (LIP-Arena), a prospective Commit-Measure-Score competition eliminating benchmark overfitting; and (iv) a Red Team adversarial verification module. Across a 26-modality benchmark, we demonstrate that operator correction improves reconstruction by +0.54 to +48.25 dB across 9 correction configurations spanning 7 distinct modalities, with mismatch (Gate 3) identified as the binding constraint in every modality tested. PWM provides the infrastructure to move computational imaging from artisanal practice to industrial standardization.</p>
+    </div>
+
+    <!-- 1. Introduction -->
+    <h2>1. Introduction</h2>
+    <p>In 2022, the Mask-guided Spectral-wise Transformer (MST-L) achieved 34.81 dB on the standard CASSI benchmark -- a number that represents years of sustained algorithmic progress in hyperspectral image reconstruction. Yet when the coded aperture mask is subjected to a 5-parameter perturbation (sub-pixel shift, rotation, dispersion drift, and spectral axis tilt) -- well within the manufacturing and alignment tolerances of any real optical system -- the same method collapses to 20.83 dB, a loss of <strong>13.98 dB</strong>. Under this sub-pixel mismatch model, deep-learning solvers (HDNet, MST-S, MST-L) lose 12.78-13.98 dB. To put this in perspective, the entire history of CASSI reconstruction -- from GAP-TV at 24.34 dB to MST-L at 34.81 dB -- spans only 10.47 dB. A sub-pixel operator mismatch erases years of algorithmic improvement.</p>
+    <p>This is not an isolated failure. Across modalities -- CASSI, CACTI, single-pixel cameras (SPC) -- the pattern repeats: the most powerful neural solvers exhibit the <em>largest</em> sensitivity to forward-model error. Classical methods such as GAP-TV lose only 3.38 dB under the same mismatch, precisely because they lack the capacity to overfit the operator. The paradox is stark: the field has been building faster and faster trains while ignoring the fact that the rails are broken.</p>
+    <p><strong>The thesis.</strong> We argue that the computational imaging community is optimizing the wrong layer. The bottleneck is not the <em>solver</em> -- the reconstruction algorithm that maps measurements to images -- but the <em>infrastructure</em> around it: the evaluation protocols, the physics representations, the calibration pipelines, and the benchmarks that determine what counts as progress. In the language of industrial revolutions, solvers are <em>trains</em> -- visible, glamorous, and destined to commoditize. The compounding, durable value lies in the <em>rails</em>: the standards, metrics, and institutional infrastructure that make it possible for any train to run reliably.</p>
+    <p>This paper presents the <strong>Physics World Model (PWM)</strong> as precisely such a rail for computational imaging. PWM is not a new reconstruction algorithm. It is an <em>evaluation harness</em> -- a standardized infrastructure layer that makes it possible to measure, compare, and improve reconstruction methods under realistic physical conditions.</p>
+    <p><strong>Contributions.</strong> Our specific contributions are: (1) SolveEverything mapping to imaging -- the first systematic mapping of the SolveEverything Industrial Intelligence Stack to computational imaging; (2) OperatorGraph IR as universal physics representation -- a graph-based intermediate representation for forward measurement operators unifying 64 modalities; (3) 26-modality benchmark evidence demonstrating that neural solvers systematically amplify operator mismatch; (4) Operator correction across 9 correction configurations spanning 7 distinct modalities; (5) LIP-Arena prospective evaluation protocol -- the first Commit-Measure-Score competition for computational imaging.</p>
+
+    <!-- 2. The Problem: Solver-Only Optimization -->
+    <h2>2. The Problem: Solver-Only Optimization</h2>
+    <p>The computational imaging community has invested enormous effort in building better reconstruction algorithms -- deeper networks, more sophisticated architectures, larger training sets -- while treating the forward measurement operator as a fixed, known quantity. This section demonstrates that this assumption is catastrophically wrong, and that the resulting <em>solver-only optimization</em> paradigm produces an illusion of progress that collapses on contact with physical reality.</p>
+    <h3>The Mask-Sensitivity Spectrum</h3>
+    <p>Under ideal conditions, MST-L leads the field at 34.81 dB -- a full 10.47 dB above GAP-TV. Under mismatch, MST-L collapses to 20.83 dB, while GAP-TV drops only to 20.96 dB. The classical method <em>matches</em> the state-of-the-art transformer under realistic physical conditions. The degradation column tells the story most clearly: GAP-TV loses 3.38 dB, PnP-HSICNN loses 6.02 dB (estimated), and MST-L loses 13.98 dB. There is a near-perfect inverse relationship between ideal-condition performance and mismatch robustness.</p>
+    <p>HDNet presents a partial counterexample: it achieves high ideal PSNR (34.66 dB) with degradation of -12.78 dB, retaining 21.88 dB under mismatch. However, its Oracle Gain is zero (+0.00 dB), indicating that its mask-conditioning pathway cannot exploit an improved operator estimate -- a hallmark of mask-oblivious architectures.</p>
+    <h3>Evaluation Fragmentation</h3>
+    <p>Even if every lab evaluated mismatch sensitivity, the results would remain incomparable due to pervasive <em>evaluation fragmentation</em>: different metrics (PSNR, SSIM, SAM, LPIPS), different datasets (KAIST, CAVE, ICVL), different noise models (noiseless, Gaussian, Poisson-Gaussian), and different mismatch definitions. The result is a literature in which every paper reports numbers that cannot be meaningfully compared with any other paper. This is precisely the condition that the SolveEverything framework calls <em>The Muddle</em>.</p>
+    <h3>The Scale of the Challenge</h3>
+    <p>PWM's current registry includes 64 distinct modalities spanning five physical carriers. For each modality, at least 5 types of operator mismatch are physically relevant. The solver space includes at least 10 competitive reconstruction methods per modality. The resulting evaluation space is on the order of 64 modalities x 5 mismatch types x 10 solvers = 3,200 experiments (minimum). No ad hoc evaluation effort can cover this space. What is needed is standardized infrastructure for evaluation.</p>
+
+    <!-- 3. The SolveEverything Framework for Imaging -->
+    <h2>3. The SolveEverything Framework for Imaging</h2>
+    <h3>Four Stages of Revolution</h3>
+    <p><strong>Stage 1: Legibility.</strong> Can you measure the problem? Currently, the answer is no -- the field uses incommensurable metrics, datasets, noise models, and mismatch definitions.</p>
+    <p><strong>Stage 2: Harnessing.</strong> Can you capture the energy? This requires standardized evaluation so that improvements measured by one group are meaningful to all others.</p>
+    <p><strong>Stage 3: Institutionalization.</strong> Can you scale it? This is the stage at which LIP-Arena and the Red Team module operate: automated, prospective evaluation at scale.</p>
+    <p><strong>Stage 4: Abundance.</strong> Is it a commodity? Every imaging system ships with a self-calibrating operator model that continuously updates itself.</p>
+    <h3>Rails vs. Trains</h3>
+    <p>In computational imaging, the trains are reconstruction algorithms -- GAP-TV, MST-L, HDNet, and their successors. The rails are the infrastructure components that remain valuable regardless of which solver is running: the OperatorGraph IR, the 4-scenario evaluation protocol, the LIP-Arena, the calibration pipelines, and the governance structures. PWM is designed entirely as a rail.</p>
+    <h3>The L0-L5 Maturity Ladder</h3>
+    <p>Six maturity levels: L0 (The Muddle), L1 (Measurable), L2 (Repeatable), L3 (Automated), L4 (Industrialized), L5 (Commoditized). The field is currently transitioning from L1 to L2. The most impactful transition is from L2 (repeatable, but manual) to L3 (automated) -- the transition from artisanal craft to industrial process.</p>
+
+    <!-- 4. PWM Architecture: The Evaluation Harness -->
+    <h2>4. PWM Architecture: The Evaluation Harness</h2>
+    <h3>OperatorGraph IR: A Universal DAG for Physics</h3>
+    <p>At the core of PWM lies the OperatorGraph IR -- a directed acyclic graph (DAG) formalism that represents any forward measurement operator as a composition of primitive physical operations. Nodes include: mask modulation, convolution, spectral dispersion, temporal modulation, projection, Fourier sampling, noise injection, and sensor integration. Edges define data flow. The primitive library spans five physical carriers (photons, electrons, spins, acoustic waves, particles). PWM includes 89 validated OperatorGraph templates covering 64 distinct modalities.</p>
+    <h3>The 4-Scenario Evaluation Protocol</h3>
+    <p><strong>Scenario I (Ideal):</strong> True operator for both measurement and reconstruction -- the oracle upper bound. <strong>Scenario II (Assumed/Mismatch):</strong> True operator for measurement, nominal operator for reconstruction -- the realistic deployment condition. <strong>Scenario III (Corrected):</strong> True operator for measurement, calibrated operator for reconstruction -- the calibration benefit. <strong>Scenario IV (Oracle Mask):</strong> True operator for reconstruction on mismatched data -- the correction ceiling.</p>
+    <p>Derived metrics include: Degradation = PSNR_I - PSNR_II, Calibration Gain = PSNR_III - PSNR_II, Recovery Ratio = (PSNR_III - PSNR_II) / (PSNR_I - PSNR_II), and Oracle Gap = PSNR_I - PSNR_III.</p>
+    <h3>LIP-Arena: Prospective Evaluation via Commit-Measure-Score</h3>
+    <p>The LIP-Arena is a prospective evaluation competition in which test data is generated <em>after</em> all submissions are finalized. The key principle is: data created after deadline -- no memorization possible. The four-phase protocol: Phase 1 (Commit, 2 weeks), Phase 2 (Measure, 2 weeks), Phase 3 (Execute, 1 week), Phase 4 (Score, 1 week). Four evaluation tracks: Correct, Diagnose, No-GT, and Design. Anti-Goodhart scoring via prospective dominance weighting, gaming penalties, and multi-metric ranking.</p>
+    <h3>Red Team Module: Adversarial Verification</h3>
+    <p>The Red Team module comprises six categories of adversarial tests totaling over 2,900 pre-designed scenarios: novel mismatch, compound mismatch, out-of-family physics, distribution shift, compute traps, and gate-flip scenarios.</p>
+
+    <!-- 5. The Triad Law: Diagnosing Imaging Failure -->
+    <h2>5. The Triad Law: Diagnosing Imaging Failure</h2>
+    <p>We identify three principal root causes that account for the vast majority of imaging failures across modalities.</p>
+    <p><strong>Gate 1 -- Recoverability (Sampling).</strong> Does the measurement encode enough information to recover the target signal? Gate 1 is violated whenever the null space of the forward operator is too large.</p>
+    <p><strong>Gate 2 -- Carrier Budget (Noise).</strong> Is the signal-to-noise ratio sufficient for the desired reconstruction quality? Even when the forward operator is well-posed, the photon budget, dose, or quantum efficiency may be inadequate.</p>
+    <p><strong>Gate 3 -- Operator Mismatch (System Fidelity).</strong> Does the assumed model match the true physics? When H_true does not equal H_nom, the reconstruction algorithm inverts the <em>wrong</em> operator.</p>
+    <p>Every benchmark submission must include a TriadReport -- a structured artifact containing: dominant gate ID, evidence scores, confidence interval, and recommended action. The central empirical finding is that Gate 3 (operator mismatch) is the binding constraint in every modality tested.</p>
+
+    <!-- 6. Multi-Agent Orchestration -->
+    <h2>6. Multi-Agent Orchestration</h2>
+    <p>PWM automates the full imaging pipeline through a multi-agent architecture comprising 9 pipeline components (including 8 agents and the RunBundle packager) and 8 support classes, totaling 10,545 lines of Python. All agents run deterministically without requiring a large language model. The pipeline flow: User Prompt -> PlanAgent -> PhotonAgent + MismatchAgent + RecoverabilityAgent -> AnalysisAgent -> Negotiator -> PreFlightReportBuilder -> Pipeline Runner -> RunBundle.</p>
+    <p>The contract ecosystem comprises 25 Pydantic models, all inheriting from StrictBaseModel, backed by 9 YAML registries totaling 7,034 lines.</p>
+
+    <!-- 7. Empirical Evidence -->
+    <h2>7. Empirical Evidence</h2>
+    <h3>26-Modality Benchmark</h3>
+    <p>All 26 registered modalities pass the benchmark threshold under Scenario I (ideal operator). Average PSNR is approximately 37.0 dB (excluding Phase Retrieval identity test); range 25.46-64.84 dB over physically meaningful modalities. The range reflects the diversity of forward models -- from the heavily ill-posed CT (25.46 dB) to OCT (64.84 dB).</p>
+    <h3>16-Modality Operator Correction</h3>
+    <p>Improvements range from +0.54 dB (CASSI Alg 1) to +48.25 dB (MRI coil sensitivity correction). The most dramatic improvement is MRI coil-sensitivity correction at +48.25 dB. CACTI mask timing correction yields +22.94 dB. SPC and Matrix gain bias correction yields +12.21 dB. CT center-of-rotation correction yields +10.67 dB. Ptychography position offset correction yields +7.09 dB. Lensless PSF shift correction yields +3.55 dB.</p>
+    <h3>CASSI Deep Dive</h3>
+    <p>The mismatch cost -- the gap from Scenario I to Scenario II -- is catastrophic. For MST-L the drop is 34.81 - 20.83 = 13.98 dB, while the best solver upgrade under ideal conditions (GAP-TV to MST-L) yields 34.81 - 24.34 = 10.47 dB. The mismatch penalty is 1.34x the solver upgrade gain. Fixing the operator is worth more than upgrading from a classical solver to the state of the art.</p>
+
+    <!-- 8. Reproducibility and Open Infrastructure -->
+    <h2>8. Reproducibility and Open Infrastructure</h2>
+    <p>Every imaging experiment executed through PWM produces a RunBundle v0.3.0 -- a self-contained, immutable archive. Every artifact is hashed with SHA-256. Decision Records for Imaging Systems (DR-IS) log every calibration decision cryptographically. The ExperimentSpec v0.2.1 eliminates ambiguity by requiring that every parameter be drawn from a typed, validated registry. The PWM evaluation harness is released under the MIT license, with 3,743 tests spanning unit, integration, regression, and end-to-end tests achieving 0 failures.</p>
+
+    <!-- 9. The Foundry Window and Roadmap -->
+    <h2>9. The Foundry Window and Roadmap</h2>
+    <p>Computational imaging in 2026 lacks every piece of shared infrastructure that enabled the AlphaFold revolution: no CASP equivalent, no Protein Data Bank equivalent, and no universal evaluation protocol. The field is not merely fragmented -- it is pre-paradigmatic.</p>
+    <p>The roadmap is organized into three six-month phases: <strong>Phase 1</strong> (Months 1-6): Become the default evaluation infrastructure via pip install pwm-eval, replication packs, and external laboratory validation. <strong>Phase 2</strong> (Months 7-12): Launch the CISP Public Competition with a public leaderboard and blinded test sets. <strong>Phase 3</strong> (Months 13-18): Become the Action Network with robotic lab API, compute escrow, calibration-as-a-service API, and outcome-based contracts.</p>
+
+    <!-- 10. Call to Action -->
+    <h2>10. Call to Action</h2>
+    <p><strong>Professors:</strong> Co-steward the LIP-Arena evaluation tracks. Validate your group's methods on the four-scenario protocol and publish the full diagnostic vector. Serve on the CISP steward board.</p>
+    <p><strong>PhD Students:</strong> Join the calibration sprints. Pick one of the 64 registered modalities, measure its mask-sensitivity spectrum on physical hardware, and contribute a row to the correction table.</p>
+    <p><strong>Hobbyists:</strong> Participate in the weekly SolveEverything challenges. The entire infrastructure is released under the MIT license: zero cost, zero barrier to entry.</p>
+    <p><strong>Investors:</strong> The flywheel economics create three revenue surfaces: calibration-as-a-service, pay-per-reconstruction APIs, and imaging SLAs.</p>
+
+    <!-- 11. Conclusion -->
+    <h2>11. Conclusion</h2>
+    <p>We began with a paradox: computational imaging possesses solvers of extraordinary power, yet real-world deployments routinely fail. Reconstructions that achieve 35+ dB on simulated benchmarks collapse by 3.38-13.98 dB under realistic operator mismatch. The gap is not a solver problem. It is an infrastructure problem.</p>
+    <p>This paper introduced PWM, the Physics World Model, as the rail for computational imaging. The contributions are concrete: 64 modalities formalized as composable OperatorGraph templates, 89 validated templates, the four-scenario evaluation protocol, LIP-Arena, and the Triad Law. Across the 26-modality benchmark, operator correction alone improved reconstruction quality by +0.54 to +48.25 dB across 9 correction configurations. The CASSI deep-dive was particularly revealing: the mismatch penalty (13.98 dB) exceeded the solver upgrade gain (10.47 dB) by 1.34x. The bottleneck was never the algorithm. It was the physics encoding.</p>
+    <p>A problem is solved when the bottleneck shifts from genius to compute. PWM provides the infrastructure for that shift.</p>
+
+  </div>
+</main>
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>
