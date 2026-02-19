@@ -1,17 +1,33 @@
-"""Base agent with shared LLM calling, streaming, error handling, and retry logic."""
+"""Base agent with shared LLM calling, streaming, error handling, and retry logic.
+
+Supports two backends:
+  1. CompareGPT (preferred) — OpenAI-compatible API gateway at comparegpt.io/api
+     Set COMPAREGPT_API_KEY and optionally COMPAREGPT_BASE_URL
+  2. Anthropic (fallback) — Direct Claude API
+     Set ANTHROPIC_API_KEY
+"""
 import os
 import json
 import time
 import hashlib
 import logging
-from anthropic import Anthropic, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
 
 logger = logging.getLogger("ai_scientist")
 
 _client = None
+_backend = None  # "comparegpt" or "anthropic"
 
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
-STRONG_MODEL = "claude-opus-4-20250514"
+# CompareGPT defaults (Gemini via CompareGPT gateway)
+COMPAREGPT_BASE_URL = "https://comparegpt.io/api"
+CG_DEFAULT_MODEL = "gemini-2.5-flash"
+CG_STRONG_MODEL = "gemini-2.5-pro"
+
+# Anthropic defaults (direct)
+ANTHRO_DEFAULT_MODEL = "claude-sonnet-4-20250514"
+ANTHRO_STRONG_MODEL = "claude-opus-4-20250514"
+
+DEFAULT_MODEL = None  # set by get_client()
+STRONG_MODEL = None
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2  # seconds
@@ -20,12 +36,35 @@ LLM_TIMEOUT = 120  # seconds
 
 
 def get_client():
-    global _client
-    if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        _client = Anthropic(api_key=api_key, timeout=LLM_TIMEOUT)
+    """Initialize the LLM client. Prefers CompareGPT, falls back to Anthropic."""
+    global _client, _backend, DEFAULT_MODEL, STRONG_MODEL
+
+    if _client is not None:
+        return _client
+
+    cg_key = os.environ.get("COMPAREGPT_API_KEY", "")
+    anthro_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    if cg_key:
+        from openai import OpenAI
+        base_url = os.environ.get("COMPAREGPT_BASE_URL", COMPAREGPT_BASE_URL)
+        _client = OpenAI(api_key=cg_key, base_url=base_url, timeout=LLM_TIMEOUT)
+        _backend = "comparegpt"
+        DEFAULT_MODEL = os.environ.get("LLM_DEFAULT_MODEL", CG_DEFAULT_MODEL)
+        STRONG_MODEL = os.environ.get("LLM_STRONG_MODEL", CG_STRONG_MODEL)
+        logger.info(f"Using CompareGPT backend ({base_url}), default model: {DEFAULT_MODEL}")
+    elif anthro_key:
+        from anthropic import Anthropic
+        _client = Anthropic(api_key=anthro_key, timeout=LLM_TIMEOUT)
+        _backend = "anthropic"
+        DEFAULT_MODEL = os.environ.get("LLM_DEFAULT_MODEL", ANTHRO_DEFAULT_MODEL)
+        STRONG_MODEL = os.environ.get("LLM_STRONG_MODEL", ANTHRO_STRONG_MODEL)
+        logger.info(f"Using Anthropic backend, default model: {DEFAULT_MODEL}")
+    else:
+        raise ValueError(
+            "No LLM API key found. Set COMPAREGPT_API_KEY or ANTHROPIC_API_KEY."
+        )
+
     return _client
 
 
@@ -35,21 +74,24 @@ def _retry_with_backoff(fn, max_retries=MAX_RETRIES):
     for attempt in range(max_retries + 1):
         try:
             return fn()
-        except RateLimitError as e:
-            last_error = e
-            delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
-            logger.warning(f"Rate limited (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
-            time.sleep(delay)
-        except (APITimeoutError, APIConnectionError) as e:
-            last_error = e
-            delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
-            logger.warning(f"API error: {e} (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
-            time.sleep(delay)
-        except APIStatusError as e:
-            if e.status_code >= 500:
+        except Exception as e:
+            # Determine if retryable
+            retryable = False
+            err_name = type(e).__name__
+
+            # OpenAI SDK errors
+            if err_name in ("RateLimitError", "APITimeoutError", "APIConnectionError"):
+                retryable = True
+            elif err_name == "APIStatusError" and hasattr(e, "status_code") and e.status_code >= 500:
+                retryable = True
+            # httpx / network errors
+            elif err_name in ("ConnectError", "ReadTimeout", "ConnectTimeout"):
+                retryable = True
+
+            if retryable:
                 last_error = e
                 delay = min(RETRY_BASE_DELAY * (2 ** attempt), RETRY_MAX_DELAY)
-                logger.warning(f"Server error {e.status_code} (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
+                logger.warning(f"{err_name} (attempt {attempt+1}/{max_retries+1}), retrying in {delay}s")
                 time.sleep(delay)
             else:
                 raise
@@ -57,39 +99,70 @@ def _retry_with_backoff(fn, max_retries=MAX_RETRIES):
 
 
 def call_llm(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
-    """Call Claude API with retry logic and return the text response."""
+    """Call LLM with retry logic and return the text response."""
     c = get_client()
+    use_model = model or DEFAULT_MODEL
 
-    def _call():
-        response = c.messages.create(
-            model=model or DEFAULT_MODEL,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_prompt,
-            messages=messages,
-        )
-        return response.content[0].text
-
-    return _retry_with_backoff(_call)
+    if _backend == "comparegpt":
+        def _call():
+            oai_messages = [{"role": "system", "content": system_prompt}]
+            oai_messages.extend(messages)
+            response = c.chat.completions.create(
+                model=use_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=oai_messages,
+            )
+            return response.choices[0].message.content
+        return _retry_with_backoff(_call)
+    else:
+        # Anthropic backend
+        def _call():
+            response = c.messages.create(
+                model=use_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_prompt,
+                messages=messages,
+            )
+            return response.content[0].text
+        return _retry_with_backoff(_call)
 
 
 def call_llm_stream(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
-    """Call Claude API with streaming and retry on initial connection, yielding text chunks."""
+    """Call LLM with streaming and retry on initial connection, yielding text chunks."""
     c = get_client()
+    use_model = model or DEFAULT_MODEL
 
-    def _create_stream():
-        return c.messages.stream(
-            model=model or DEFAULT_MODEL,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_prompt,
-            messages=messages,
-        )
-
-    stream_ctx = _retry_with_backoff(_create_stream)
-    with stream_ctx as stream:
-        for text in stream.text_stream:
-            yield text
+    if _backend == "comparegpt":
+        def _create_stream():
+            oai_messages = [{"role": "system", "content": system_prompt}]
+            oai_messages.extend(messages)
+            return c.chat.completions.create(
+                model=use_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=oai_messages,
+                stream=True,
+            )
+        stream = _retry_with_backoff(_create_stream)
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+    else:
+        # Anthropic backend
+        def _create_stream():
+            return c.messages.stream(
+                model=use_model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_prompt,
+                messages=messages,
+            )
+        stream_ctx = _retry_with_backoff(_create_stream)
+        with stream_ctx as stream:
+            for text in stream.text_stream:
+                yield text
 
 
 def multi_turn(system_prompt, turns, model=None, max_tokens=4096, temperature=0.7):
