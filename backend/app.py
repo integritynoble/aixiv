@@ -51,15 +51,15 @@ async def login_page(request: Request, error: str = ""):
 
 @app.get("/sso/callback")
 async def sso_callback(request: Request, access_token: str = "", token: str = "", code: str = "", sso_token: str = ""):
+    """SSO callback — platformai.org is whitelisted, so cookie is set directly."""
     # CompareGPT SSO sends the token as access_token; accept other common names too
     tok = access_token or token or code or sso_token
     if not tok:
-        logger.warning(f"SSO callback: no token. params={dict(request.query_params)}")
-        return RedirectResponse("https://aixiv.platformai.org/login?error=No+token+received")
+        return RedirectResponse("/login?error=No+token+received")
 
     user_info = await exchange_sso_token(tok)
     if not user_info or not user_info.get("user_id"):
-        return RedirectResponse("https://aixiv.platformai.org/login?error=SSO+validation+failed")
+        return RedirectResponse("/login?error=SSO+validation+failed")
 
     now = datetime.utcnow().isoformat()
     conn = get_db()
@@ -79,48 +79,13 @@ async def sso_callback(request: Request, access_token: str = "", token: str = ""
         """, (user_info["user_id"], user_info["user_name"], user_info.get("role", "user"),
               user_info["credit"], user_info["token"], tok,
               user_info["api_key"], now, now))
-
-    # Store a one-time auth code so we can set the cookie on aixiv.platformai.org
-    import uuid as _uuid
-    auth_code = _uuid.uuid4().hex
-    expires_at = datetime.utcfromtimestamp(
-        datetime.utcnow().timestamp() + 300  # 5 minutes
-    ).isoformat()
-    conn.execute("""
-        INSERT OR REPLACE INTO sso_codes
-            (code, user_id, user_name, role, api_key, credit, token, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (auth_code, user_info["user_id"], user_info["user_name"],
-          user_info.get("role", "user"), user_info["api_key"],
-          user_info["credit"], user_info["token"], expires_at))
     conn.commit()
     conn.close()
 
-    # Redirect to aixiv.platformai.org which will exchange the code for a cookie
-    return RedirectResponse(f"https://aixiv.platformai.org/sso/finalize?code={auth_code}")
-
-
-@app.get("/sso/finalize")
-async def sso_finalize(code: str = ""):
-    """Exchange a one-time SSO code for a JWT cookie on aixiv.platformai.org."""
-    if not code:
-        return RedirectResponse("/login?error=Missing+auth+code")
-
-    now = datetime.utcnow().isoformat()
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM sso_codes WHERE code = ? AND expires_at > ?", (code, now)
-    ).fetchone()
-    if not row:
-        conn.close()
-        return RedirectResponse("/login?error=Auth+code+expired+or+invalid")
-
-    conn.execute("DELETE FROM sso_codes WHERE code = ?", (code,))
-    conn.commit()
-    conn.close()
-
-    jwt_token = create_jwt(row["user_id"], row["user_name"], row["role"])
-    response = RedirectResponse("/scientist", status_code=302)
+    # Set JWT cookie directly and redirect to profile page
+    jwt_token = create_jwt(user_info["user_id"], user_info["user_name"],
+                           user_info.get("role", "user"))
+    response = RedirectResponse("/profile", status_code=302)
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response
@@ -1148,10 +1113,8 @@ async def scientist_page(request: Request, user: dict = Depends(get_optional_use
     return templates.TemplateResponse("scientist.html", {"request": request, "user": user})
 
 @app.get("/writer", response_class=HTMLResponse)
-async def writer_page(request: Request, user: dict = Depends(get_optional_user)):
-    if not user:
-        return RedirectResponse("/login")
-    return templates.TemplateResponse("writer.html", {"request": request, "user": user})
+async def writer_page(request: Request):
+    return RedirectResponse("/scientist?mode=write", status_code=301)
 
 @app.get("/reviewer", response_class=HTMLResponse)
 async def reviewer_page(request: Request, user: dict = Depends(get_optional_user)):
@@ -1179,11 +1142,15 @@ async def pwm_page(request: Request, user: dict = Depends(get_optional_user)):
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request, user: dict = Depends(get_optional_user)):
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user})
-
-@app.get("/writer", response_class=HTMLResponse)
-async def writer_redirect(request: Request):
-    return RedirectResponse("/scientist?mode=write", status_code=301)
+    # Enrich user dict with full DB row for profile page
+    db_user = None
+    if user:
+        conn = get_db()
+        row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user["user_id"],)).fetchone()
+        conn.close()
+        if row:
+            db_user = dict(row)
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "db_user": db_user})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1826,7 +1793,7 @@ async def local_register(request: Request):
     conn.close()
 
     jwt_token = create_jwt(user_id, username, "user")
-    response = JSONResponse({"user_id": user_id, "user_name": username, "status": "registered", "redirect": "/dashboard"})
+    response = JSONResponse({"user_id": user_id, "user_name": username, "status": "registered", "redirect": "/profile"})
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response
@@ -1856,7 +1823,7 @@ async def local_login(request: Request):
         raise HTTPException(401, "Invalid username or password")
 
     jwt_token = create_jwt(user["user_id"], user["user_name"], user["role"])
-    response = JSONResponse({"user_id": user["user_id"], "user_name": user["user_name"], "redirect": "/dashboard"})
+    response = JSONResponse({"user_id": user["user_id"], "user_name": user["user_name"], "redirect": "/profile"})
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response

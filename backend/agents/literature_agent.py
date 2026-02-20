@@ -88,7 +88,7 @@ def search_arxiv(query, max_results=MAX_RESULTS):
     return papers, None
 
 
-def generate_search_queries(idea_text, model=None):
+def generate_search_queries(idea_text, model=None, api_key=None, api_provider=None):
     """Generate search queries for a research idea."""
     prompt = f"""Generate 3 effective arXiv search queries to find related work for this research idea:
 
@@ -97,7 +97,8 @@ def generate_search_queries(idea_text, model=None):
 Generate queries that would find the most relevant prior art."""
 
     response = call_llm(QUERY_GEN_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=1024, temperature=0.5)
+                        model=model, max_tokens=1024, temperature=0.5,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     if parsed and "queries" in parsed:
         return parsed["queries"]
@@ -106,7 +107,7 @@ Generate queries that would find the most relevant prior art."""
     return [" ".join(words)]
 
 
-def assess_novelty(idea_text, found_papers, model=None):
+def assess_novelty(idea_text, found_papers, model=None, api_key=None, api_provider=None):
     """Assess novelty of an idea against found papers."""
     papers_text = ""
     for i, p in enumerate(found_papers, 1):
@@ -126,12 +127,13 @@ def assess_novelty(idea_text, found_papers, model=None):
 Determine if this idea is novel, not novel (already done), or if more search is needed."""
 
     response = call_llm(NOVELTY_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=2048, temperature=0.3)
+                        model=model, max_tokens=2048, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     return parsed if parsed else {"decision": "novel", "confidence": 0.5, "summary": response}, response
 
 
-def run_novelty_check(idea_text, model=None):
+def run_novelty_check(idea_text, model=None, api_key=None, api_provider=None):
     """Run full novelty check pipeline with iterative search.
 
     Returns (assessment_dict, all_papers_found, log_entries).
@@ -141,7 +143,7 @@ def run_novelty_check(idea_text, model=None):
     seen_ids = set()
 
     # Generate initial queries
-    queries = generate_search_queries(idea_text, model=model)
+    queries = generate_search_queries(idea_text, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "generate_queries", "queries": queries})
 
     for round_num in range(MAX_SEARCH_ROUNDS):
@@ -158,7 +160,7 @@ def run_novelty_check(idea_text, model=None):
             log.append({"step": "search", "round": round_num + 1, "query": query, "found": len(papers)})
 
         # Assess novelty
-        assessment, raw = assess_novelty(idea_text, all_papers, model=model)
+        assessment, raw = assess_novelty(idea_text, all_papers, model=model, api_key=api_key, api_provider=api_provider)
         log.append({"step": "assess", "round": round_num + 1, "decision": assessment.get("decision", "unknown")})
 
         if assessment.get("decision") != "needs_more_search":

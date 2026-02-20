@@ -68,7 +68,7 @@ Output JSON:
 }"""
 
 
-def generate_ideas(topic, num_ideas=5, model=None):
+def generate_ideas(topic, num_ideas=5, model=None, api_key=None, api_provider=None):
     """Generate initial research ideas for a topic."""
     prompt = f"""Generate {num_ideas} novel research project ideas for the following topic/description:
 
@@ -77,14 +77,15 @@ def generate_ideas(topic, num_ideas=5, model=None):
 Provide diverse ideas spanning different approaches and methodologies. Each idea should be distinct and address a different aspect of the problem."""
 
     response = call_llm(IDEA_MAKER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     if parsed and "ideas" in parsed:
         return parsed["ideas"], response
     return [], response
 
 
-def critique_ideas(ideas, topic, model=None):
+def critique_ideas(ideas, topic, model=None, api_key=None, api_provider=None):
     """Critique a list of research ideas."""
     ideas_text = ""
     for i, idea in enumerate(ideas, 1):
@@ -103,7 +104,8 @@ def critique_ideas(ideas, topic, model=None):
 Be rigorous. Identify which ideas are truly novel, which are incremental, and which have fundamental flaws. Score each 1-10."""
 
     response = call_llm(IDEA_CRITIC_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     if parsed and "critiques" in parsed:
         return parsed["critiques"], response
@@ -128,7 +130,7 @@ def select_top_ideas(critiques, ideas, n=2):
     return selected if selected else ideas[:n]
 
 
-def refine_idea(idea, critique, topic, model=None):
+def refine_idea(idea, critique, topic, model=None, api_key=None, api_provider=None):
     """Refine a single idea based on critique feedback."""
     idea_text = ""
     if isinstance(idea, dict):
@@ -158,12 +160,13 @@ Critique:
 Produce an improved version that addresses the weaknesses and incorporates the suggestions."""
 
     response = call_llm(IDEA_REFINER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     return parsed if parsed else {"title": "Refined Idea", "description": response}, response
 
 
-def run_idea_pipeline(topic, model=None):
+def run_idea_pipeline(topic, model=None, api_key=None, api_provider=None):
     """Run the full idea generation pipeline:
     Generate 5 → Critique → Select 2 → Critique → Select 1 → Refine → Final idea.
 
@@ -172,14 +175,14 @@ def run_idea_pipeline(topic, model=None):
     log = []
 
     # Step 1: Generate 5 ideas
-    ideas, raw = generate_ideas(topic, num_ideas=5, model=model)
+    ideas, raw = generate_ideas(topic, num_ideas=5, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "generate", "raw": raw, "count": len(ideas)})
 
     if not ideas:
         return {"title": "Generation Failed", "description": raw}, log
 
     # Step 2: Critique all 5
-    critiques, raw = critique_ideas(ideas, topic, model=model)
+    critiques, raw = critique_ideas(ideas, topic, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "critique_round1", "raw": raw, "count": len(critiques)})
 
     # Step 3: Select top 2
@@ -187,7 +190,7 @@ def run_idea_pipeline(topic, model=None):
     log.append({"step": "select_top2", "count": len(top2)})
 
     # Step 4: Critique top 2 more deeply
-    critiques2, raw = critique_ideas(top2, topic, model=model)
+    critiques2, raw = critique_ideas(top2, topic, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "critique_round2", "raw": raw})
 
     # Step 5: Select top 1
@@ -197,7 +200,7 @@ def run_idea_pipeline(topic, model=None):
     # Step 6: Refine the winner
     best_idea = top1[0] if top1 else top2[0]
     best_critique = critiques2[0] if critiques2 else (critiques[0] if critiques else {})
-    final_idea, raw = refine_idea(best_idea, best_critique, topic, model=model)
+    final_idea, raw = refine_idea(best_idea, best_critique, topic, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "refine", "raw": raw})
 
     return final_idea, log

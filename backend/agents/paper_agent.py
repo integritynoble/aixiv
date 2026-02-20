@@ -84,7 +84,7 @@ SECTION_ORDER = ["abstract", "introduction", "related_work", "methods",
 
 
 def compose_section(section_name, idea, methodology, prior_sections=None,
-                    related_papers=None, model=None):
+                    related_papers=None, model=None, api_key=None, api_provider=None):
     """Write a single paper section.
 
     Args:
@@ -131,11 +131,12 @@ def compose_section(section_name, idea, methodology, prior_sections=None,
 Write only the {section_name.replace('_', ' ').title()} section. Do not include section headers like "# Abstract" — just the content."""
 
     response = call_llm(COMPOSER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     return response
 
 
-def revise_section(section_name, current_content, feedback, context="", model=None):
+def revise_section(section_name, current_content, feedback, context="", model=None, api_key=None, api_provider=None):
     """Revise a specific section based on feedback.
 
     Returns revised section text.
@@ -154,11 +155,12 @@ def revise_section(section_name, current_content, feedback, context="", model=No
 Produce a revised version that addresses all the feedback. Output only the revised section content."""
 
     response = call_llm(COMPOSER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     return response
 
 
-def compose_full_paper(idea, methodology, related_papers=None, model=None):
+def compose_full_paper(idea, methodology, related_papers=None, model=None, api_key=None, api_provider=None):
     """Compose a full paper section by section.
 
     Returns (sections_dict, log_entries).
@@ -172,6 +174,7 @@ def compose_full_paper(idea, methodology, related_papers=None, model=None):
             prior_sections=sections,
             related_papers=related_papers,
             model=model,
+            api_key=api_key, api_provider=api_provider,
         )
         sections[section_name] = content
         log.append({"step": f"compose_{section_name}", "length": len(content)})

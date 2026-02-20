@@ -33,7 +33,7 @@ Rate the methodology maturity (L0-L5) and explain what's needed to reach the nex
 Output your review as structured Markdown."""
 
 
-def generate_methodology(idea, related_papers=None, model=None):
+def generate_methodology(idea, related_papers=None, model=None, api_key=None, api_provider=None):
     """Generate detailed methodology for a research idea.
 
     Args:
@@ -73,11 +73,12 @@ Provide a complete methodology that another researcher could follow to reproduce
 Include mathematical formulations where appropriate."""
 
     response = call_llm(METHODOLOGY_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     return response, response
 
 
-def review_methodology(methodology_text, idea_text="", model=None):
+def review_methodology(methodology_text, idea_text="", model=None, api_key=None, api_provider=None):
     """Review and critique a methodology.
 
     Returns:
@@ -95,11 +96,12 @@ Identify all gaps, weaknesses, and missing elements. Provide specific suggestion
 Assess the maturity level (L0-L5) of this methodology."""
 
     response = call_llm(METHODOLOGY_REVIEWER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=3072)
+                        model=model, max_tokens=3072,
+                        api_key=api_key, api_provider=api_provider)
     return response, response
 
 
-def run_methodology_pipeline(idea, related_papers=None, model=None):
+def run_methodology_pipeline(idea, related_papers=None, model=None, api_key=None, api_provider=None):
     """Run full methodology pipeline: generate → review → refine.
 
     Returns (final_methodology, review_feedback, log_entries).
@@ -107,7 +109,7 @@ def run_methodology_pipeline(idea, related_papers=None, model=None):
     log = []
 
     # Step 1: Generate initial methodology
-    methodology, raw = generate_methodology(idea, related_papers, model=model)
+    methodology, raw = generate_methodology(idea, related_papers, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "generate_methodology", "length": len(methodology)})
 
     # Step 2: Review the methodology
@@ -117,7 +119,7 @@ def run_methodology_pipeline(idea, related_papers=None, model=None):
     else:
         idea_text = str(idea)
 
-    review, raw = review_methodology(methodology, idea_text, model=model)
+    review, raw = review_methodology(methodology, idea_text, model=model, api_key=api_key, api_provider=api_provider)
     log.append({"step": "review_methodology", "length": len(review)})
 
     # Step 3: Refine based on review
@@ -133,7 +135,8 @@ Produce an improved methodology that addresses all the reviewer's concerns.
 Maintain the same structure but strengthen weak areas."""
 
     refined = call_llm(METHODOLOGY_SYSTEM, [{"role": "user", "content": refine_prompt}],
-                       model=model, max_tokens=4096)
+                       model=model, max_tokens=4096,
+                       api_key=api_key, api_provider=api_provider)
     log.append({"step": "refine_methodology", "length": len(refined)})
 
     return refined, review, log

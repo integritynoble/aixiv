@@ -64,7 +64,7 @@ Be thorough and adversarial but honest. Only flag real issues, not speculative o
 Every finding must cite specific evidence from the paper."""
 
 
-def redteam_paper(title, abstract, full_text="", model=None):
+def redteam_paper(title, abstract, full_text="", model=None, api_key=None, api_provider=None):
     """Run red team analysis on a paper.
 
     Returns (findings_dict, raw_response).
@@ -88,7 +88,8 @@ adversarial scenarios, and overclaiming. Output as JSON."""
 
     use_model = model or STRONG_MODEL
     response = call_llm(REDTEAM_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=use_model, max_tokens=6144, temperature=0.3)
+                        model=use_model, max_tokens=6144, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
 
     parsed = parse_json_from_response(response)
     if parsed:

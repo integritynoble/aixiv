@@ -58,7 +58,7 @@ def transition_paper(paper_id, new_status):
     return new_status
 
 
-def run_full_review(paper_id, model=None):
+def run_full_review(paper_id, model=None, api_key=None, api_provider=None):
     """Run the complete review pipeline: peer review + red team + meta-review.
 
     Returns dict with all results.
@@ -83,7 +83,7 @@ def run_full_review(paper_id, model=None):
     results = {}
 
     # Step 1: Peer Review (3-layer)
-    peer_result, peer_raw = review_paper(title, abstract, full_text, model=model)
+    peer_result, peer_raw = review_paper(title, abstract, full_text, model=model, api_key=api_key, api_provider=api_provider)
     flat = extract_flat_scores(peer_result)
     conn.execute("""
         INSERT INTO reviews (paper_id, reviewer_type, review_layer, overall_score,
@@ -103,7 +103,7 @@ def run_full_review(paper_id, model=None):
                     f"Title: {title}", flat["summary"][:500])
 
     # Step 2: Red Team
-    redteam_result, redteam_raw = redteam_paper(title, abstract, full_text, model=model)
+    redteam_result, redteam_raw = redteam_paper(title, abstract, full_text, model=model, api_key=api_key, api_provider=api_provider)
     conn.execute("""
         INSERT INTO redteam_reports (paper_id, overall_risk, confidence, findings,
                                     attack_scenarios, summary, raw_report, created_at)
@@ -120,7 +120,7 @@ def run_full_review(paper_id, model=None):
                     f"Title: {title}", redteam_result.get("summary", "")[:500])
 
     # Step 3: Meta-Review
-    meta_result, meta_raw = meta_review(title, abstract, peer_result, redteam_result, model=model)
+    meta_result, meta_raw = meta_review(title, abstract, peer_result, redteam_result, model=model, api_key=api_key, api_provider=api_provider)
     conn.execute("""
         INSERT INTO meta_reviews (paper_id, final_recommendation, confidence,
                                  justification, maturity_level, required_changes,
@@ -166,7 +166,7 @@ def run_full_review(paper_id, model=None):
     return results
 
 
-def run_rail_evaluation(paper_id, model=None):
+def run_rail_evaluation(paper_id, model=None, api_key=None, api_provider=None):
     """Run the Rail 4-scenario evaluation.
 
     Returns eval_dict.
@@ -182,7 +182,7 @@ def run_rail_evaluation(paper_id, model=None):
     full_text = paper["full_text"] or ""
     now = datetime.utcnow().isoformat()
 
-    eval_result, raw = evaluate_paper(title, abstract, full_text, model=model)
+    eval_result, raw = evaluate_paper(title, abstract, full_text, model=model, api_key=api_key, api_provider=api_provider)
 
     for scenario in eval_result.get("scenarios", []):
         conn.execute("""
@@ -207,7 +207,7 @@ def promote_to_arena(paper_id):
     return promote_paper(paper_id)
 
 
-def run_full_pipeline(topic, authors="AI Scientist", callback=None):
+def run_full_pipeline(topic, authors="AI Scientist", callback=None, api_key=None, api_provider=None):
     """Run the complete AI Scientist pipeline end-to-end:
     idea → novelty → method → compose → submit → review → revision suggestions.
 
@@ -227,27 +227,27 @@ def run_full_pipeline(topic, authors="AI Scientist", callback=None):
     # Phase 1: WRITE
     # Step 1: Idea generation
     emit("idea_start", {"message": "Generating research ideas (5 candidates, 2 critique rounds)..."})
-    idea, idea_log = run_idea_pipeline(topic)
+    idea, idea_log = run_idea_pipeline(topic, api_key=api_key, api_provider=api_provider)
     results["idea"] = idea
     emit("idea_done", {"idea": idea, "log": idea_log})
 
     # Step 2: Novelty check
     idea_text = f"{idea.get('title', '')}: {idea.get('description', '')}"
     emit("novelty_start", {"message": "Checking novelty against arXiv..."})
-    assessment, papers_found, novelty_log = run_novelty_check(idea_text)
+    assessment, papers_found, novelty_log = run_novelty_check(idea_text, api_key=api_key, api_provider=api_provider)
     results["novelty"] = {"assessment": assessment, "papers_found": len(papers_found),
                           "top_papers": papers_found[:10]}
     emit("novelty_done", {"assessment": assessment, "papers_found": len(papers_found)})
 
     # Step 3: Methodology
     emit("method_start", {"message": "Developing methodology..."})
-    methodology, method_review, method_log = run_methodology_pipeline(idea, papers_found[:10])
+    methodology, method_review, method_log = run_methodology_pipeline(idea, papers_found[:10], api_key=api_key, api_provider=api_provider)
     results["methodology"] = methodology
     emit("method_done", {"methodology": methodology[:500]})
 
     # Step 4: Paper composition
     emit("compose_start", {"message": "Composing full paper (7 sections)..."})
-    sections, compose_log = compose_full_paper(idea, methodology, papers_found[:10])
+    sections, compose_log = compose_full_paper(idea, methodology, papers_found[:10], api_key=api_key, api_provider=api_provider)
     paper_md = format_paper_markdown(idea.get("title", "Untitled"), authors, sections)
     results["sections"] = sections
     results["full_paper"] = paper_md
@@ -290,7 +290,7 @@ def run_full_pipeline(topic, authors="AI Scientist", callback=None):
 
     # Phase 3: REVIEW
     emit("review_start", {"message": "Running full AI review (peer + red team + meta)..."})
-    review_results = run_full_review(paper_id)
+    review_results = run_full_review(paper_id, api_key=api_key, api_provider=api_provider)
     results["review"] = review_results
     emit("review_done", {
         "status": review_results.get("new_status", ""),
@@ -309,6 +309,7 @@ def run_full_pipeline(topic, authors="AI Scientist", callback=None):
         json.dumps(peer_raw)[:3000] if isinstance(peer_raw, dict) else str(peer_raw)[:3000],
         json.dumps(redteam_raw)[:3000] if isinstance(redteam_raw, dict) else str(redteam_raw)[:3000],
         json.dumps(meta_raw)[:2000] if isinstance(meta_raw, dict) else str(meta_raw)[:2000],
+        api_key=api_key, api_provider=api_provider,
     )
     results["revisions"] = revision_result
     emit("revise_done", {

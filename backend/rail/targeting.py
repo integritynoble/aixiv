@@ -103,7 +103,7 @@ Output JSON:
 }"""
 
 
-def assess_maturity(title, abstract, full_text="", model=None):
+def assess_maturity(title, abstract, full_text="", model=None, api_key=None, api_provider=None):
     """Assess the maturity level of a paper using the targeting system.
 
     Returns (assessment_dict, raw_response).
@@ -134,7 +134,8 @@ Evaluate each checklist item. A paper's level is the highest level where it pass
 AND passes all lower levels. Be specific about which items are satisfied and which are missing."""
 
     response = call_llm(TARGETING_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096, temperature=0.3)
+                        model=model, max_tokens=4096, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
 
     parsed = parse_json_from_response(response)
     if parsed:

@@ -73,7 +73,7 @@ For other domains, assess domain-specific technical validity.
 Be rigorous but constructive. The goal is to help authors improve their work."""
 
 
-def review_paper(title, abstract, full_text="", model=None):
+def review_paper(title, abstract, full_text="", model=None, api_key=None, api_provider=None):
     """Run full three-layer review on a paper.
 
     Returns (parsed_review_dict, raw_response).
@@ -101,7 +101,8 @@ Output your review as a JSON object following your output format specification."
 
     use_model = model or STRONG_MODEL
     response = call_llm(REVIEWER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=use_model, max_tokens=6144, temperature=0.3)
+                        model=use_model, max_tokens=6144, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
 
     parsed = parse_json_from_response(response)
     if parsed:

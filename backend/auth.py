@@ -17,11 +17,9 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRY = 60 * 60 * 24 * 7  # 7 days
 
 SSO_REDIRECT_URL = "https://comparegpt.io/sso-redirect"
-# Use the CompareGPT-AIScientist backend (running locally on port 9252)
-# for SSO token exchange — the same method that cias.comparegpt.io uses.
-CIAS_BACKEND_VALIDATE = "http://127.0.0.1:9252/api/user/validate"
-# cias.comparegpt.io is whitelisted with CompareGPT SSO
-SSO_CALLBACK_URL = os.environ.get("SSO_CALLBACK_URL", "https://cias.comparegpt.io/sso/callback")
+SSO_VALIDATE_URL = "https://auth.comparegpt.io/sso/validate"
+# platformai.org is now whitelisted in CompareGPT SSO — direct callback
+SSO_CALLBACK_URL = os.environ.get("SSO_CALLBACK_URL", "https://aixiv.platformai.org/sso/callback")
 
 
 def create_jwt(user_id: str, user_name: str = "", role: str = "user") -> str:
@@ -49,10 +47,9 @@ def verify_jwt(token: str) -> dict | None:
 
 
 async def exchange_sso_token(sso_token: str) -> dict | None:
-    """Exchange an SSO token using the CompareGPT-AIScientist backend at port 9252.
+    """Exchange an SSO token with auth.comparegpt.io/sso/validate.
 
-    This is the same method cias.comparegpt.io uses: call POST /api/user/validate
-    with {"sso_token": token}, and the backend handles auth.comparegpt.io validation.
+    platformai.org is now whitelisted, so we call the SSO service directly.
 
     Returns user info dict with keys: user_id, user_name, api_key, credit, token, role
     or None on failure.
@@ -60,32 +57,26 @@ async def exchange_sso_token(sso_token: str) -> dict | None:
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
-                CIAS_BACKEND_VALIDATE,
-                json={"sso_token": sso_token},
-                headers={"Content-Type": "application/json"},
+                SSO_VALIDATE_URL,
+                headers={"Authorization": f"Bearer {sso_token}"},
             )
-            logger.info(f"CIAS validate response: {resp.status_code}")
+            logger.info(f"SSO validate response: {resp.status_code}")
             if resp.status_code == 200:
                 body = resp.json()
-                # CIAS backend returns:
-                # { success: true, access_token: "...", user: {
-                #     user_info: {user_id, user_name, role},
-                #     balance: {credit, token},
-                #     api_key: "..."
-                # }}
-                user = body.get("user") or {}
-                user_info = user.get("user_info") or {}
-                balance = user.get("balance") or {}
+                # auth.comparegpt.io returns { data: { user_info: {...}, balance: {...}, ... } }
+                data = body.get("data") or body
+                user_info = data.get("user_info") or data
+                balance = data.get("balance") or {}
                 return {
-                    "user_id": str(user_info.get("user_id", "")),
-                    "user_name": user_info.get("user_name", ""),
-                    "api_key": user.get("api_key", ""),
-                    "credit": balance.get("credit", 0),
-                    "token": balance.get("token", 0),
+                    "user_id": str(user_info.get("user_id", user_info.get("id", ""))),
+                    "user_name": user_info.get("user_name", user_info.get("name", "")),
+                    "api_key": data.get("api_key", user_info.get("api_key", "")),
+                    "credit": balance.get("credit", data.get("credit", 0)),
+                    "token": balance.get("token", data.get("token", 0)),
                     "role": user_info.get("role", "user"),
                 }
             else:
-                logger.error(f"CIAS validate failed: {resp.status_code} {resp.text}")
+                logger.error(f"SSO validate failed: {resp.status_code} {resp.text}")
                 return None
     except Exception as e:
         logger.error(f"SSO exchange error: {e}")

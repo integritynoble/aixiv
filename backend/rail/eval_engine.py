@@ -68,7 +68,7 @@ Output JSON:
 }"""
 
 
-def evaluate_paper(title, abstract, full_text="", model=None):
+def evaluate_paper(title, abstract, full_text="", model=None, api_key=None, api_provider=None):
     """Run 4-scenario evaluation on a paper.
 
     Returns (eval_dict, raw_response).
@@ -87,7 +87,8 @@ Assess each scenario carefully. Score each 0-10 based on how well the paper addr
 A paper is "Rail-compliant" if it scores >= 5 on all four scenarios."""
 
     response = call_llm(EVAL_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096, temperature=0.3)
+                        model=model, max_tokens=4096, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
 
     parsed = parse_json_from_response(response)
     if parsed:

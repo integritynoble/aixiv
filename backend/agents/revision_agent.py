@@ -46,7 +46,7 @@ Output only the revised section text, nothing else."""
 
 
 def generate_revisions(paper_text, review_feedback, redteam_feedback="",
-                       meta_review="", model=None):
+                       meta_review="", model=None, api_key=None, api_provider=None):
     """Generate revision suggestions based on all review feedback.
 
     Returns (revisions_dict, raw_response).
@@ -74,7 +74,8 @@ Generate specific, actionable revision suggestions. Prioritize required changes 
 Also draft a revision letter responding to each reviewer point."""
 
     response = call_llm(REVISION_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=6144)
+                        model=model, max_tokens=6144,
+                        api_key=api_key, api_provider=api_provider)
     parsed = parse_json_from_response(response)
     if parsed:
         return parsed, response
@@ -86,7 +87,7 @@ Also draft a revision letter responding to each reviewer point."""
     }, response
 
 
-def apply_revisions(section_text, revisions, model=None):
+def apply_revisions(section_text, revisions, model=None, api_key=None, api_provider=None):
     """Apply a list of revisions to a paper section.
 
     Returns revised section text.
@@ -110,11 +111,12 @@ def apply_revisions(section_text, revisions, model=None):
 Produce the complete revised section, incorporating all changes smoothly."""
 
     response = call_llm(REVISION_APPLY_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=model, max_tokens=4096)
+                        model=model, max_tokens=4096,
+                        api_key=api_key, api_provider=api_provider)
     return response
 
 
-def generate_revision_letter(paper_title, review_feedback, changes_made, model=None):
+def generate_revision_letter(paper_title, review_feedback, changes_made, model=None, api_key=None, api_provider=None):
     """Generate a formal revision letter (response to reviewers).
 
     Returns the revision letter text.
@@ -137,5 +139,6 @@ Format as:
         "You are a scientific writing assistant helping authors write revision letters.",
         [{"role": "user", "content": prompt}],
         model=model, max_tokens=4096,
+        api_key=api_key, api_provider=api_provider,
     )
     return response

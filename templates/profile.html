@@ -18,11 +18,15 @@
 .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 700px) { .profile-grid { grid-template-columns: 1fr; } }
 
-.avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6a1b9a); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: white; margin-bottom: 12px; }
-.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-.stat-row:last-child { border-bottom: none; }
-.stat-label { color: var(--text-muted); }
-.stat-val { font-weight: 600; }
+.avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6a1b9a); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: white; margin: 0 auto 16px auto; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-muted); font-size: 13px; }
+.info-val { font-weight: 600; }
+.info-val.badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+.badge-sso { background: #e3f2fd; color: #1565c0; }
+.badge-local { background: #f3e5f5; color: #6a1b9a; }
+.badge-role { background: #e8f5e9; color: #2e7d32; }
 
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
@@ -31,38 +35,30 @@
 
 .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .btn-primary:hover { opacity: 0.9; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; }
 .btn-outline:hover { background: var(--accent); color: white; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .btn-danger { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-danger:hover { background: #c62828; color: white; }
+
+.msg { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-top: 10px; display: none; }
+.msg.ok { background: #e8f5e9; color: #2e7d32; }
+.msg.err { background: #ffebee; color: #c62828; }
+
+.credit-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.credit-fill { height: 100%; background: linear-gradient(to right, var(--accent), #6a1b9a); border-radius: 4px; transition: width 0.5s; }
+
+.sso-btn { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #333; text-decoration: none; width: 100%; justify-content: center; margin-bottom: 10px; }
+.sso-btn:hover { background: var(--code-bg); }
+
+.divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--text-muted); font-size: 13px; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
 .tab-btn { padding: 8px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none; border-right: none; border-top: none; }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
-
-.msg { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-top: 10px; display: none; }
-.msg.ok { background: #e8f5e9; color: #2e7d32; }
-.msg.err { background: #ffebee; color: #c62828; }
-
-.sso-btn { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: #333; text-decoration: none; width: 100%; justify-content: center; margin-bottom: 10px; }
-.sso-btn:hover { background: var(--code-bg); }
-.sso-icon { font-size: 20px; }
-
-.divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--text-muted); font-size: 13px; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-.activity-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-.activity-item:last-child { border-bottom: none; }
-.activity-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-.activity-text { flex: 1; }
-.activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-.credit-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
-.credit-fill { height: 100%; background: linear-gradient(to right, var(--accent), #6a1b9a); border-radius: 4px; transition: width 0.5s; }
 </style>
 </head>
 <body>
@@ -72,12 +68,9 @@
     <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
     <nav>
       <a href="/">Papers</a>
-      <a href="/scientist">AI Scientist</a>
-      <a href="/reviewer">AI Reviewer</a>
       <a href="/pwm">PWM</a>
-      <a href="/arena">Arena</a>
       <a href="/targeting">Targeting</a>
-      <a href="/dashboard">Dashboard</a>
+      <a href="/profile" class="active">Profile</a>
     </nav>
   </div>
 </header>
@@ -88,55 +81,102 @@
 <div class="profile-container">
   <div class="profile-hero">
     <h1>User <span class="accent">Profile</span></h1>
-    <p>Manage your account, API keys, and view activity</p>
+    <p>Manage your account and API keys</p>
   </div>
 
   {% if user %}
-  <!-- ── Logged-in view ── -->
+  <!-- ══════════ Logged-in view ══════════ -->
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
+    <button class="tab-btn active" onclick="switchTab('account', this)">Account</button>
     <button class="tab-btn" onclick="switchTab('apikeys', this)">API Keys</button>
-    <button class="tab-btn" onclick="switchTab('activity', this)" id="tab-activity-btn">Activity</button>
   </div>
 
-  <!-- Overview -->
-  <div class="tab-pane active" id="tab-overview">
+  <!-- Account Tab -->
+  <div class="tab-pane active" id="tab-account">
     <div class="profile-grid">
+      <!-- User Identity Card -->
       <div class="card">
-        <div class="avatar" id="avatar-initials">{{ (user.user_name or user.user_id or 'U')[0]|upper }}</div>
-        <h3 style="margin-bottom:8px">{{ user.user_name or user.user_id }}</h3>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">{{ user.user_id }}</div>
-        <div class="stat-row"><span class="stat-label">Role</span><span class="stat-val">{{ user.role or 'user' }}</span></div>
-        <div class="stat-row">
-          <span class="stat-label">Credits</span>
-          <span class="stat-val" id="credit-val">{{ user.credit or 0 }}</span>
+        <div class="avatar">{{ (user.user_name or user.user_id or 'U')[0]|upper }}</div>
+        <h3 style="margin-bottom:4px;justify-content:center">{{ user.user_name or user.user_id }}</h3>
+        <div style="font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:20px">
+          {% if user.user_id.startswith('local_') %}
+            <span class="info-val badge badge-local">Local Account</span>
+          {% else %}
+            <span class="info-val badge badge-sso">CompareGPT SSO</span>
+          {% endif %}
         </div>
-        <div class="credit-bar"><div class="credit-fill" id="credit-bar-fill" style="width:0%"></div></div>
-        <div class="stat-row"><span class="stat-label">Tokens</span><span class="stat-val">{{ user.token or 0 }}</span></div>
-        <div class="btn-row" style="margin-top:20px">
-          <a href="/api/auth/logout" class="btn-outline" style="text-decoration:none;text-align:center">Sign Out</a>
+
+        <div class="info-row">
+          <span class="info-label">User ID</span>
+          <span class="info-val" style="font-size:13px;font-family:monospace">{{ user.user_id }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Display Name</span>
+          <span class="info-val">{{ user.user_name or '—' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Role</span>
+          <span class="info-val badge badge-role">{{ user.role or 'user' }}</span>
+        </div>
+        <div class="btn-row" style="margin-top:20px;justify-content:center">
+          <a href="/api/auth/logout" class="btn-outline">Sign Out</a>
         </div>
       </div>
+
+      <!-- Account Details Card -->
       <div class="card">
-        <h3>Quick Stats</h3>
-        <div class="stat-row"><span class="stat-label">Papers Submitted</span><span class="stat-val" id="stat-papers">—</span></div>
-        <div class="stat-row"><span class="stat-label">Reviews Run</span><span class="stat-val" id="stat-reviews">—</span></div>
-        <div class="stat-row"><span class="stat-label">Targeting Assessments</span><span class="stat-val" id="stat-targeting">—</span></div>
-        <div class="stat-row"><span class="stat-label">Arena Papers</span><span class="stat-val" id="stat-arena">—</span></div>
-        <div class="stat-row"><span class="stat-label">API Provider</span><span class="stat-val">{% if user.effective_provider %}{{ user.effective_provider }}{% else %}SSO default{% endif %}</span></div>
-        <div class="btn-row" style="margin-top:20px">
-          <a href="/scientist" class="btn-primary" style="text-decoration:none">New Paper</a>
-          <a href="/targeting" class="btn-outline" style="text-decoration:none">Targeting</a>
+        <h3>Account Details</h3>
+
+        {% if not user.user_id.startswith('local_') %}
+        <!-- SSO user: show credits and token balance -->
+        <div class="info-row">
+          <span class="info-label">Credits</span>
+          <span class="info-val" id="credit-val">{{ '%.2f'|format(user.credit|default(0, true)|float) }}</span>
+        </div>
+        <div class="credit-bar"><div class="credit-fill" id="credit-bar-fill" style="width:0%"></div></div>
+        <div class="info-row">
+          <span class="info-label">Tokens</span>
+          <span class="info-val">{{ '%.2f'|format(user.token|default(0, true)|float) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">SSO API Key</span>
+          <span class="info-val" style="font-size:12px">
+            {% if db_user and db_user.api_key %}
+              {{ db_user.api_key[:8] }}...{{ db_user.api_key[-4:] }}
+            {% else %}
+              Not set
+            {% endif %}
+          </span>
+        </div>
+        {% endif %}
+
+        <div class="info-row">
+          <span class="info-label">Active Provider</span>
+          <span class="info-val">{% if user.effective_provider %}{{ user.effective_provider }}{% else %}None{% endif %}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Custom API Key</span>
+          <span class="info-val">{% if user.effective_api_key and (db_user and db_user.custom_api_key) %}Configured{% else %}Not set{% endif %}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Member Since</span>
+          <span class="info-val">{% if db_user and db_user.created_at %}{{ db_user.created_at[:10] }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last Updated</span>
+          <span class="info-val">{% if db_user and db_user.updated_at %}{{ db_user.updated_at[:10] }}{% else %}—{% endif %}</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- API Keys -->
+  <!-- API Keys Tab -->
   <div class="tab-pane" id="tab-apikeys">
     <div class="card">
       <h3>API Key Configuration</h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Override the SSO-provided API key with your own. Your key is stored securely and used for all LLM calls.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+        Override the SSO-provided API key with your own. Your key is stored securely and used for all LLM calls (PWM analysis, targeting assessments, etc.).
+      </p>
       <div class="form-group">
         <label>Provider</label>
         <select id="profile-provider">
@@ -156,28 +196,46 @@
       </div>
       <div class="msg" id="apikey-msg"></div>
     </div>
-  </div>
-
-  <!-- Activity -->
-  <div class="tab-pane" id="tab-activity">
     <div class="card">
-      <h3>Recent Activity</h3>
-      <div id="activity-list"><div style="text-align:center;padding:24px;color:var(--text-muted)">Loading activity...</div></div>
+      <h3>Current Key Status</h3>
+      <div class="info-row">
+        <span class="info-label">Custom Provider</span>
+        <span class="info-val">{% if db_user and db_user.custom_api_provider %}{{ db_user.custom_api_provider }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Custom Key</span>
+        <span class="info-val">
+          {% if db_user and db_user.custom_api_key %}
+            {{ db_user.custom_api_key[:6] }}...{{ db_user.custom_api_key[-4:] }}
+          {% else %}
+            Not configured
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Effective Key Source</span>
+        <span class="info-val">
+          {% if db_user and db_user.custom_api_key %}
+            Custom ({{ db_user.custom_api_provider or 'unknown' }})
+          {% elif db_user and db_user.api_key %}
+            SSO (CompareGPT)
+          {% else %}
+            None configured
+          {% endif %}
+        </span>
+      </div>
     </div>
   </div>
 
   {% else %}
-  <!-- ── Logged-out view ── -->
+  <!-- ══════════ Logged-out view ══════════ -->
   <div class="profile-grid">
     <!-- Sign In -->
     <div class="card">
       <h3>Sign In</h3>
-      <a href="/login" class="sso-btn">
-        <span class="sso-icon">🔐</span>
-        Sign in with CompareGPT SSO
-      </a>
+      <a href="/login" class="sso-btn">Sign in with CompareGPT SSO</a>
       <div class="divider">or use local account</div>
-      <div class="form-group"><label>Email / Username</label><input type="text" id="login-username" placeholder="your@email.com"></div>
+      <div class="form-group"><label>Username</label><input type="text" id="login-username" placeholder="your_username"></div>
       <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
       <div class="btn-row"><button class="btn-primary" onclick="localLogin()" style="width:100%">Sign In</button></div>
       <div class="msg" id="login-msg"></div>
@@ -186,16 +244,13 @@
     <!-- Register -->
     <div class="card">
       <h3>Create Account</h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Register a local account or use CompareGPT SSO for full platform features including AI credits.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Register a local account or use CompareGPT SSO for full features including AI credits.</p>
       <div class="form-group"><label>Username</label><input type="text" id="reg-username" placeholder="your_username"></div>
-      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Choose a strong password"></div>
+      <div class="form-group"><label>Email (optional)</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 8 characters"></div>
       <div class="form-group"><label>Confirm Password</label><input type="password" id="reg-confirm" placeholder="Repeat password"></div>
       <div class="btn-row"><button class="btn-primary" onclick="localRegister()" style="width:100%">Create Account</button></div>
       <div class="msg" id="reg-msg"></div>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted)">
-        For AI credits and full CompareGPT integration, use <a href="/login" style="color:var(--accent)">SSO sign-in</a>.
-      </div>
     </div>
   </div>
   {% endif %}
@@ -203,7 +258,7 @@
 
 <footer>
   <div class="footer-inner">
-    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
+    <p>aiXiv — Open Research Archive</p>
     <p>Operated by NextGen PlatformAI C Corp</p>
   </div>
 </footer>
@@ -214,26 +269,14 @@ function switchTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'activity') loadActivity();
 }
 
-// Credit bar
-const credit = parseFloat(document.getElementById('credit-val')?.textContent || '0');
+// Credit bar fill
+const creditEl = document.getElementById('credit-val');
 const fillEl = document.getElementById('credit-bar-fill');
-if (fillEl) fillEl.style.width = Math.min(credit/100*100,100)+'%';
-
-// Quick stats
-async function loadStats() {
-  try {
-    const [papers, dashboard] = await Promise.all([
-      fetch('/api/papers').then(r=>r.json()).catch(()=>[]),
-      fetch('/api/dashboard').then(r=>r.json()).catch(()=>({})),
-    ]);
-    document.getElementById('stat-papers').textContent = papers.length || 0;
-    document.getElementById('stat-reviews').textContent = dashboard.total_reviews || 0;
-    document.getElementById('stat-targeting').textContent = dashboard.total_targeting || 0;
-    document.getElementById('stat-arena').textContent = dashboard.arena_papers || 0;
-  } catch(e) {}
+if (creditEl && fillEl) {
+  const credit = parseFloat(creditEl.textContent || '0');
+  fillEl.style.width = Math.min(credit / 50 * 100, 100) + '%';
 }
 
 // API key management
@@ -244,9 +287,9 @@ async function saveProfileKey() {
   try {
     const resp = await fetch('/api/auth/apikey', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({provider, api_key:apiKey})});
     const data = await resp.json();
-    msg.className='msg ok'; msg.style.display='block';
-    msg.textContent = resp.ok ? 'API key saved!' : (data.detail||'Failed');
-    if (!resp.ok) msg.className='msg err';
+    msg.style.display='block';
+    if (resp.ok) { msg.className='msg ok'; msg.textContent='API key saved! Reload to see updated status.'; }
+    else { msg.className='msg err'; msg.textContent=data.detail||'Failed to save'; }
   } catch(e) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Network error'; }
 }
 
@@ -254,24 +297,6 @@ async function clearProfileKey() {
   document.getElementById('profile-provider').value='';
   document.getElementById('profile-apikey').value='';
   await saveProfileKey();
-}
-
-// Activity feed
-async function loadActivity() {
-  const el = document.getElementById('activity-list');
-  try {
-    const [papers, reviews] = await Promise.all([
-      fetch('/api/papers').then(r=>r.json()).catch(()=>[]),
-      fetch('/api/papers').then(r=>r.json()).then(ps => Promise.all(ps.slice(0,5).map(p=>
-        fetch('/api/reviews/'+encodeURIComponent(p.paper_id)).then(r=>r.json()).catch(()=>({reviews:[]}))
-      ))).catch(()=>[]),
-    ]);
-    let html='';
-    papers.slice(0,8).forEach(p=>{
-      html+=`<div class="activity-item"><div class="activity-icon">📄</div><div class="activity-text"><strong>${esc(p.title||p.paper_id)}</strong><div style="font-size:12px;color:var(--text-muted)">Submitted · ${p.paper_id} · ${p.status}</div></div><div class="activity-time">${(p.created_at||'').slice(0,10)}</div></div>`;
-    });
-    el.innerHTML = html || '<div style="text-align:center;padding:24px;color:var(--text-muted)">No activity yet. <a href="/scientist" style="color:var(--accent)">Submit your first paper.</a></div>';
-  } catch(e) { el.innerHTML='<div style="color:var(--text-muted);font-size:13px">Failed to load activity.</div>'; }
 }
 
 // Local login
@@ -283,7 +308,7 @@ async function localLogin() {
   try {
     const resp = await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password})});
     const data = await resp.json();
-    if (resp.ok) { window.location.href='/scientist'; }
+    if (resp.ok) { window.location.href='/profile'; }
     else { msg.className='msg err'; msg.style.display='block'; msg.textContent=data.detail||'Login failed'; }
   } catch(e) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Network error'; }
 }
@@ -295,21 +320,16 @@ async function localRegister() {
   const password = document.getElementById('reg-password').value;
   const confirm = document.getElementById('reg-confirm').value;
   const msg = document.getElementById('reg-msg');
-  if (!username || !email || !password) { msg.className='msg err'; msg.style.display='block'; msg.textContent='All fields are required'; return; }
+  if (!username || !password) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Username and password are required'; return; }
   if (password !== confirm) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Passwords do not match'; return; }
   if (password.length < 8) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Password must be at least 8 characters'; return; }
   try {
     const resp = await fetch('/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, email, password})});
     const data = await resp.json();
-    if (resp.ok) { msg.className='msg ok'; msg.style.display='block'; msg.textContent='Account created! Signing you in...'; setTimeout(()=>window.location.href='/scientist',1200); }
+    if (resp.ok) { msg.className='msg ok'; msg.style.display='block'; msg.textContent='Account created!'; setTimeout(()=>window.location.href='/profile',1000); }
     else { msg.className='msg err'; msg.style.display='block'; msg.textContent=data.detail||'Registration failed'; }
   } catch(e) { msg.className='msg err'; msg.style.display='block'; msg.textContent='Network error'; }
 }
-
-function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-
-// Init
-if (document.getElementById('stat-papers')) loadStats();
 </script>
 </body>
 </html>

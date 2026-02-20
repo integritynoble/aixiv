@@ -5,6 +5,10 @@ Supports two backends:
      Set COMPAREGPT_API_KEY and optionally COMPAREGPT_BASE_URL
   2. Anthropic (fallback) — Direct Claude API
      Set ANTHROPIC_API_KEY
+
+Per-user API keys:
+  All LLM-calling functions accept optional api_key/api_provider params.
+  When provided, a per-request client is created instead of using the global singleton.
 """
 import os
 import json
@@ -26,6 +30,10 @@ CG_STRONG_MODEL = "gemini-2.5-pro"
 ANTHRO_DEFAULT_MODEL = "claude-sonnet-4-20250514"
 ANTHRO_STRONG_MODEL = "claude-opus-4-20250514"
 
+# OpenAI defaults
+OAI_DEFAULT_MODEL = "gpt-4o"
+OAI_STRONG_MODEL = "gpt-4o"
+
 DEFAULT_MODEL = None  # set by get_client()
 STRONG_MODEL = None
 
@@ -36,7 +44,7 @@ LLM_TIMEOUT = 120  # seconds
 
 
 def get_client():
-    """Initialize the LLM client. Prefers CompareGPT, falls back to Anthropic."""
+    """Initialize the global LLM client. Prefers CompareGPT, falls back to Anthropic."""
     global _client, _backend, DEFAULT_MODEL, STRONG_MODEL
 
     if _client is not None:
@@ -66,6 +74,34 @@ def get_client():
         )
 
     return _client
+
+
+def _make_client(api_key, provider):
+    """Create a per-user LLM client for a given API key and provider.
+
+    Returns (client, backend_name, default_model, strong_model).
+    """
+    if not api_key:
+        # Fall back to global
+        c = get_client()
+        return c, _backend, DEFAULT_MODEL, STRONG_MODEL
+
+    provider = (provider or "comparegpt").lower()
+
+    if provider == "anthropic":
+        from anthropic import Anthropic
+        c = Anthropic(api_key=api_key, timeout=LLM_TIMEOUT)
+        return c, "anthropic", ANTHRO_DEFAULT_MODEL, ANTHRO_STRONG_MODEL
+    elif provider == "openai":
+        from openai import OpenAI
+        c = OpenAI(api_key=api_key, timeout=LLM_TIMEOUT)
+        return c, "openai", OAI_DEFAULT_MODEL, OAI_STRONG_MODEL
+    else:
+        # comparegpt — OpenAI-compatible
+        from openai import OpenAI
+        base_url = os.environ.get("COMPAREGPT_BASE_URL", COMPAREGPT_BASE_URL)
+        c = OpenAI(api_key=api_key, base_url=base_url, timeout=LLM_TIMEOUT)
+        return c, "comparegpt", CG_DEFAULT_MODEL, CG_STRONG_MODEL
 
 
 def _retry_with_backoff(fn, max_retries=MAX_RETRIES):
@@ -98,12 +134,22 @@ def _retry_with_backoff(fn, max_retries=MAX_RETRIES):
     raise last_error
 
 
-def call_llm(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
-    """Call LLM with retry logic and return the text response."""
-    c = get_client()
-    use_model = model or DEFAULT_MODEL
+def call_llm(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7,
+             api_key=None, api_provider=None):
+    """Call LLM with retry logic and return the text response.
 
-    if _backend == "comparegpt":
+    When api_key/api_provider are provided, uses a per-user client instead of the global one.
+    """
+    if api_key:
+        c, backend, def_model, _ = _make_client(api_key, api_provider)
+    else:
+        c = get_client()
+        backend = _backend
+        def_model = DEFAULT_MODEL
+
+    use_model = model or def_model
+
+    if backend in ("comparegpt", "openai"):
         def _call():
             oai_messages = [{"role": "system", "content": system_prompt}]
             oai_messages.extend(messages)
@@ -129,12 +175,19 @@ def call_llm(system_prompt, messages, model=None, max_tokens=4096, temperature=0
         return _retry_with_backoff(_call)
 
 
-def call_llm_stream(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7):
+def call_llm_stream(system_prompt, messages, model=None, max_tokens=4096, temperature=0.7,
+                    api_key=None, api_provider=None):
     """Call LLM with streaming and retry on initial connection, yielding text chunks."""
-    c = get_client()
-    use_model = model or DEFAULT_MODEL
+    if api_key:
+        c, backend, def_model, _ = _make_client(api_key, api_provider)
+    else:
+        c = get_client()
+        backend = _backend
+        def_model = DEFAULT_MODEL
 
-    if _backend == "comparegpt":
+    use_model = model or def_model
+
+    if backend in ("comparegpt", "openai"):
         def _create_stream():
             oai_messages = [{"role": "system", "content": system_prompt}]
             oai_messages.extend(messages)
@@ -165,7 +218,8 @@ def call_llm_stream(system_prompt, messages, model=None, max_tokens=4096, temper
                 yield text
 
 
-def multi_turn(system_prompt, turns, model=None, max_tokens=4096, temperature=0.7):
+def multi_turn(system_prompt, turns, model=None, max_tokens=4096, temperature=0.7,
+               api_key=None, api_provider=None):
     """Run a multi-turn conversation. `turns` is a list of user messages.
     Returns the list of all messages and the final assistant reply."""
     messages = []
@@ -173,7 +227,8 @@ def multi_turn(system_prompt, turns, model=None, max_tokens=4096, temperature=0.
     for user_msg in turns:
         messages.append({"role": "user", "content": user_msg})
         reply = call_llm(system_prompt, messages, model=model,
-                         max_tokens=max_tokens, temperature=temperature)
+                         max_tokens=max_tokens, temperature=temperature,
+                         api_key=api_key, api_provider=api_provider)
         messages.append({"role": "assistant", "content": reply})
     return messages, reply
 

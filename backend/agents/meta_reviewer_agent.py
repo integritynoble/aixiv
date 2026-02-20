@@ -44,7 +44,7 @@ Your job is to:
 }"""
 
 
-def meta_review(title, abstract, peer_review, redteam_report, model=None):
+def meta_review(title, abstract, peer_review, redteam_report, model=None, api_key=None, api_provider=None):
     """Synthesize peer review and red team report into a meta-review.
 
     Returns (meta_review_dict, raw_response).
@@ -79,7 +79,8 @@ Weigh all evidence, resolve any contradictions, and produce your final meta-revi
 
     use_model = model or STRONG_MODEL
     response = call_llm(META_REVIEWER_SYSTEM, [{"role": "user", "content": prompt}],
-                        model=use_model, max_tokens=4096, temperature=0.3)
+                        model=use_model, max_tokens=4096, temperature=0.3,
+                        api_key=api_key, api_provider=api_provider)
 
     parsed = parse_json_from_response(response)
     if parsed:
