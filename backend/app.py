@@ -50,9 +50,9 @@ async def login_page(request: Request, error: str = ""):
 
 
 @app.get("/sso/callback")
-async def sso_callback(request: Request, token: str = "", code: str = "", sso_token: str = ""):
-    # Accept token under any of the common SSO parameter names
-    tok = token or code or sso_token
+async def sso_callback(request: Request, access_token: str = "", token: str = "", code: str = "", sso_token: str = ""):
+    # CompareGPT SSO sends the token as access_token; accept other common names too
+    tok = access_token or token or code or sso_token
     if not tok:
         logger.warning(f"SSO callback: no token. params={dict(request.query_params)}")
         return RedirectResponse("/login?error=No+token+received")
