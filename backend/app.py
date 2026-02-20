@@ -7,13 +7,18 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 sys.path.insert(0, os.path.dirname(__file__))
 from database import get_db, init_db, generate_paper_id
+from auth import (
+    get_current_user, get_optional_user,
+    exchange_sso_token, create_jwt,
+    SSO_REDIRECT_URL, SSO_CALLBACK_URL,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 UPLOAD_DIR = BASE_DIR / "papers"
@@ -32,11 +37,99 @@ def startup():
 
 
 # ═══════════════════════════════════════════════════════════════════
+# Auth: Login, SSO Callback, Logout, User Info, API Key
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: str = ""):
+    import urllib.parse
+    sso_url = f"{SSO_REDIRECT_URL}?redirect={urllib.parse.quote(SSO_CALLBACK_URL)}"
+    return templates.TemplateResponse("login.html", {
+        "request": request, "sso_url": sso_url, "error": error,
+    })
+
+
+@app.get("/sso/callback")
+async def sso_callback(token: str = ""):
+    if not token:
+        return RedirectResponse("/login?error=No+token+received")
+
+    user_info = await exchange_sso_token(token)
+    if not user_info or not user_info.get("user_id"):
+        return RedirectResponse("/login?error=SSO+validation+failed")
+
+    now = datetime.utcnow().isoformat()
+    conn = get_db()
+    existing = conn.execute("SELECT * FROM users WHERE user_id = ?",
+                            (user_info["user_id"],)).fetchone()
+    if existing:
+        conn.execute("""
+            UPDATE users SET user_name=?, sso_token=?, api_key=?, credit=?, token=?, updated_at=?
+            WHERE user_id=?
+        """, (user_info["user_name"], token, user_info["api_key"],
+              user_info["credit"], user_info["token"], now, user_info["user_id"]))
+    else:
+        conn.execute("""
+            INSERT INTO users (user_id, user_name, role, credit, token, sso_token, api_key,
+                              custom_api_key, custom_api_provider, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)
+        """, (user_info["user_id"], user_info["user_name"], user_info.get("role", "user"),
+              user_info["credit"], user_info["token"], token,
+              user_info["api_key"], now, now))
+    conn.commit()
+    conn.close()
+
+    jwt_token = create_jwt(user_info["user_id"], user_info["user_name"],
+                           user_info.get("role", "user"))
+    response = RedirectResponse("/scientist")
+    response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
+                        max_age=60*60*24*7, path="/")
+    return response
+
+
+@app.get("/api/auth/logout")
+async def logout():
+    response = RedirectResponse("/login")
+    response.delete_cookie("aixiv_token", path="/")
+    return response
+
+
+@app.get("/api/auth/me")
+async def auth_me(user: dict = Depends(get_current_user)):
+    return JSONResponse({
+        "user_id": user["user_id"],
+        "user_name": user["user_name"],
+        "role": user["role"],
+        "has_custom_key": bool(user.get("effective_api_key")),
+        "effective_provider": user.get("effective_provider"),
+    })
+
+
+@app.post("/api/auth/apikey")
+async def set_api_key(request: Request, user: dict = Depends(get_current_user)):
+    data = await request.json()
+    provider = data.get("provider", "")
+    api_key = data.get("api_key", "")
+
+    conn = get_db()
+    now = datetime.utcnow().isoformat()
+    conn.execute("""
+        UPDATE users SET custom_api_key=?, custom_api_provider=?, updated_at=?
+        WHERE user_id=?
+    """, (api_key, provider, now, user["user_id"]))
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({"status": "ok", "provider": provider, "has_key": bool(api_key)})
+
+
+# ═══════════════════════════════════════════════════════════════════
 # API: Paper Submission
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/submit")
 async def submit_paper(
+    request: Request,
     title: str = Form(...),
     authors: str = Form(...),
     affiliation: str = Form(""),
@@ -45,6 +138,7 @@ async def submit_paper(
     categories: str = Form(""),
     full_text: str = Form(""),
     pdf_file: UploadFile = File(None),
+    user: dict = Depends(get_current_user),
 ):
     paper_id = generate_paper_id()
     now = datetime.utcnow().isoformat()
@@ -75,10 +169,11 @@ async def submit_paper(
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/review/{paper_id}")
-async def review_paper_endpoint(paper_id: str):
+async def review_paper_endpoint(paper_id: str, user: dict = Depends(get_current_user)):
     from orchestrator import run_full_review
     try:
-        results = run_full_review(paper_id)
+        results = run_full_review(paper_id, api_key=user.get("effective_api_key"),
+                                  api_provider=user.get("effective_provider"))
     except ValueError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
@@ -95,7 +190,7 @@ async def review_paper_endpoint(paper_id: str):
 
 
 @app.post("/api/review/{paper_id}/peer")
-async def peer_review_only(paper_id: str):
+async def peer_review_only(paper_id: str, user: dict = Depends(get_current_user)):
     """Run only peer review (Layer 1-3)."""
     from agents.reviewer_agent import review_paper, extract_flat_scores
     conn = get_db()
@@ -105,7 +200,9 @@ async def peer_review_only(paper_id: str):
         raise HTTPException(404, "Paper not found")
 
     try:
-        result, raw = review_paper(paper["title"], paper["abstract"], paper["full_text"] or "")
+        result, raw = review_paper(paper["title"], paper["abstract"], paper["full_text"] or "",
+                                    api_key=user.get("effective_api_key"),
+                                    api_provider=user.get("effective_provider"))
     except Exception as e:
         conn.close()
         raise HTTPException(500, f"Peer review failed: {str(e)}")
@@ -130,7 +227,7 @@ async def peer_review_only(paper_id: str):
 
 
 @app.post("/api/review/{paper_id}/redteam")
-async def redteam_review(paper_id: str):
+async def redteam_review(paper_id: str, user: dict = Depends(get_current_user)):
     """Run red team analysis."""
     from agents.redteam_agent import redteam_paper
     conn = get_db()
@@ -140,7 +237,9 @@ async def redteam_review(paper_id: str):
         raise HTTPException(404, "Paper not found")
 
     try:
-        result, raw = redteam_paper(paper["title"], paper["abstract"], paper["full_text"] or "")
+        result, raw = redteam_paper(paper["title"], paper["abstract"], paper["full_text"] or "",
+                                    api_key=user.get("effective_api_key"),
+                                    api_provider=user.get("effective_provider"))
     except Exception as e:
         conn.close()
         raise HTTPException(500, f"Red team analysis failed: {str(e)}")
@@ -162,7 +261,7 @@ async def redteam_review(paper_id: str):
 
 
 @app.post("/api/review/{paper_id}/meta")
-async def meta_review_endpoint(paper_id: str):
+async def meta_review_endpoint(paper_id: str, user: dict = Depends(get_current_user)):
     """Run meta-review synthesis."""
     from agents.meta_reviewer_agent import meta_review
     conn = get_db()
@@ -190,6 +289,8 @@ async def meta_review_endpoint(paper_id: str):
             paper["title"], paper["abstract"],
             review["raw_review"] if review else "",
             redteam["raw_report"] if redteam else "",
+            api_key=user.get("effective_api_key"),
+            api_provider=user.get("effective_provider"),
         )
     except Exception as e:
         conn.close()
@@ -248,7 +349,7 @@ async def get_reviews(paper_id: str):
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/revise/{paper_id}")
-async def revise_paper(paper_id: str):
+async def revise_paper(paper_id: str, user: dict = Depends(get_current_user)):
     """Generate AI-assisted revision suggestions."""
     from agents.revision_agent import generate_revisions
     conn = get_db()
@@ -279,6 +380,8 @@ async def revise_paper(paper_id: str):
             review["raw_review"] if review else "",
             redteam["raw_report"] if redteam else "",
             meta["raw_review"] if meta else "",
+            api_key=user.get("effective_api_key"),
+            api_provider=user.get("effective_provider"),
         )
     except Exception as e:
         conn.close()
@@ -315,7 +418,7 @@ async def get_revisions(paper_id: str):
 
 
 @app.post("/api/revise/{paper_id}/submit")
-async def submit_revision(paper_id: str, request: Request):
+async def submit_revision(paper_id: str, request: Request, user: dict = Depends(get_current_user)):
     """Submit revised paper for re-review."""
     data = await request.json()
     revised_text = data.get("revised_text", "")
@@ -348,7 +451,7 @@ async def submit_revision(paper_id: str, request: Request):
 
 
 @app.post("/api/revise/{paper_id}/apply")
-async def apply_selected_revisions(paper_id: str, request: Request):
+async def apply_selected_revisions(paper_id: str, request: Request, user: dict = Depends(get_current_user)):
     """Apply selected revision suggestions to the paper.
 
     Request body: {
@@ -395,7 +498,9 @@ async def apply_selected_revisions(paper_id: str, request: Request):
 
     paper_text = paper["full_text"] or paper["abstract"]
     try:
-        revised = apply_revisions(paper_text, accepted)
+        revised = apply_revisions(paper_text, accepted,
+                                  api_key=user.get("effective_api_key"),
+                                  api_provider=user.get("effective_provider"))
     except Exception as e:
         conn.close()
         raise HTTPException(500, f"Failed to apply revisions: {str(e)}")
@@ -431,11 +536,12 @@ async def apply_selected_revisions(paper_id: str, request: Request):
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/rail/evaluate/{paper_id}")
-async def rail_evaluate(paper_id: str):
+async def rail_evaluate(paper_id: str, user: dict = Depends(get_current_user)):
     """Run 4-scenario Rail evaluation."""
     from orchestrator import run_rail_evaluation
     try:
-        result = run_rail_evaluation(paper_id)
+        result = run_rail_evaluation(paper_id, api_key=user.get("effective_api_key"),
+                                     api_provider=user.get("effective_provider"))
     except ValueError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
@@ -445,7 +551,7 @@ async def rail_evaluate(paper_id: str):
 
 
 @app.post("/api/rail/targeting/{paper_id}")
-async def targeting_assess(paper_id: str):
+async def targeting_assess(paper_id: str, user: dict = Depends(get_current_user)):
     """Run targeting system maturity assessment."""
     from rail.targeting import assess_maturity
     conn = get_db()
@@ -455,7 +561,9 @@ async def targeting_assess(paper_id: str):
         raise HTTPException(404, "Paper not found")
 
     try:
-        result, raw = assess_maturity(paper["title"], paper["abstract"], paper["full_text"] or "")
+        result, raw = assess_maturity(paper["title"], paper["abstract"], paper["full_text"] or "",
+                                      api_key=user.get("effective_api_key"),
+                                      api_provider=user.get("effective_provider"))
     except Exception as e:
         conn.close()
         raise HTTPException(500, f"Targeting assessment failed: {str(e)}")
@@ -480,11 +588,140 @@ async def get_decisions(paper_id: str):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# API: Targeting System (dedicated — saves to DB)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.post("/api/targeting/assess/{paper_id}")
+async def targeting_assess_full(paper_id: str, request: Request,
+                                user: dict = Depends(get_current_user)):
+    """Run targeting maturity assessment, save full detail to DB, return checklist."""
+    from rail.targeting import assess_maturity
+    data = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    target_level = data.get("target_level", "L3") if isinstance(data, dict) else "L3"
+
+    conn = get_db()
+    paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+    if not paper:
+        conn.close()
+        raise HTTPException(404, "Paper not found")
+
+    try:
+        result, raw = assess_maturity(paper["title"], paper["abstract"], paper["full_text"] or "",
+                                      api_key=user.get("effective_api_key"),
+                                      api_provider=user.get("effective_provider"))
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Targeting assessment failed: {str(e)}")
+
+    current_level = result.get("current_level", "L0")
+    targeting_score = result.get("targeting_score", 0)
+    maturity_assessment = result.get("maturity_assessment", {})
+    now = datetime.utcnow().isoformat()
+
+    # Save to targeting_assessments table
+    conn.execute("""
+        INSERT INTO targeting_assessments
+            (paper_id, current_level, target_level, targeting_score, assessment_json, model, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (paper_id, current_level, target_level, targeting_score,
+          json.dumps(maturity_assessment),
+          user.get("effective_provider", ""), now))
+
+    # Also update paper maturity level
+    conn.execute("UPDATE papers SET maturity_level = ?, updated_at = ? WHERE paper_id = ?",
+                 (current_level, now, paper_id))
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({
+        "paper_id": paper_id,
+        "current_level": current_level,
+        "target_level": target_level,
+        "targeting_score": targeting_score,
+        "next_level": result.get("next_level"),
+        "advancement_requirements": result.get("advancement_requirements", []),
+        "summary": result.get("summary", ""),
+        "maturity_assessment": maturity_assessment,
+    })
+
+
+@app.post("/api/targeting/roadmap/{paper_id}")
+async def targeting_roadmap(paper_id: str, request: Request,
+                            user: dict = Depends(get_current_user)):
+    """Generate LLM roadmap for advancing paper to target level. Updates most recent assessment."""
+    from rail.roadmap import generate_roadmap
+    data = await request.json()
+    current_level = data.get("current_level", "L1")
+    target_level = data.get("target_level", "L3")
+    gap_items = data.get("gap_items", [])
+    assessment_id = data.get("assessment_id")
+
+    conn = get_db()
+    paper = conn.execute("SELECT title, abstract FROM papers WHERE paper_id = ?",
+                         (paper_id,)).fetchone()
+    if not paper:
+        conn.close()
+        raise HTTPException(404, "Paper not found")
+
+    try:
+        roadmap_md = generate_roadmap(
+            paper["title"], paper["abstract"],
+            current_level, target_level, gap_items,
+            api_key=user.get("effective_api_key"),
+            api_provider=user.get("effective_provider"),
+        )
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Roadmap generation failed: {str(e)}")
+
+    # Update the specified assessment row (or latest) with the roadmap
+    if assessment_id:
+        conn.execute("UPDATE targeting_assessments SET roadmap = ? WHERE id = ? AND paper_id = ?",
+                     (roadmap_md, assessment_id, paper_id))
+    else:
+        conn.execute("""
+            UPDATE targeting_assessments SET roadmap = ?
+            WHERE paper_id = ? AND id = (
+                SELECT id FROM targeting_assessments WHERE paper_id = ? ORDER BY created_at DESC LIMIT 1
+            )
+        """, (roadmap_md, paper_id, paper_id))
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({"paper_id": paper_id, "roadmap": roadmap_md})
+
+
+@app.get("/api/targeting/history/{paper_id}")
+async def targeting_history(paper_id: str):
+    """Return list of past targeting assessments for a paper."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, paper_id, current_level, target_level, targeting_score,
+               assessment_json, roadmap, model, created_at
+        FROM targeting_assessments
+        WHERE paper_id = ?
+        ORDER BY created_at DESC
+    """, (paper_id,)).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        d = dict(row)
+        try:
+            d["assessment_json"] = json.loads(d["assessment_json"])
+        except (json.JSONDecodeError, TypeError):
+            d["assessment_json"] = {}
+        result.append(d)
+
+    return JSONResponse(result)
+
+
+# ═══════════════════════════════════════════════════════════════════
 # API: Arena
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/promote/{paper_id}")
-async def promote_to_arena(paper_id: str):
+async def promote_to_arena(paper_id: str, user: dict = Depends(get_current_user)):
     from orchestrator import promote_to_arena
     try:
         result = promote_to_arena(paper_id)
@@ -526,7 +763,7 @@ async def list_arena():
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/write/idea")
-async def write_idea(request: Request):
+async def write_idea(request: Request, user: dict = Depends(get_current_user)):
     """Generate research ideas for a topic."""
     from agents.idea_agent import run_idea_pipeline
     data = await request.json()
@@ -537,7 +774,8 @@ async def write_idea(request: Request):
     session_id = data.get("session_id", str(uuid.uuid4()))
 
     try:
-        idea, log = run_idea_pipeline(topic)
+        idea, log = run_idea_pipeline(topic, api_key=user.get("effective_api_key"),
+                                      api_provider=user.get("effective_provider"))
     except Exception as e:
         raise HTTPException(500, f"Idea generation failed: {str(e)}")
 
@@ -557,7 +795,7 @@ async def write_idea(request: Request):
 
 
 @app.post("/api/write/novelty")
-async def write_novelty(request: Request):
+async def write_novelty(request: Request, user: dict = Depends(get_current_user)):
     """Run novelty check on an idea."""
     from agents.literature_agent import run_novelty_check
     data = await request.json()
@@ -577,7 +815,9 @@ async def write_novelty(request: Request):
         raise HTTPException(400, "idea_text or session_id with existing idea required")
 
     try:
-        assessment, papers, log = run_novelty_check(idea_text)
+        assessment, papers, log = run_novelty_check(idea_text,
+                                                     api_key=user.get("effective_api_key"),
+                                                     api_provider=user.get("effective_provider"))
     except Exception as e:
         raise HTTPException(500, f"Novelty check failed: {str(e)}")
 
@@ -602,7 +842,7 @@ async def write_novelty(request: Request):
 
 
 @app.post("/api/write/method")
-async def write_method(request: Request):
+async def write_method(request: Request, user: dict = Depends(get_current_user)):
     """Generate methodology."""
     from agents.method_agent import run_methodology_pipeline
     data = await request.json()
@@ -625,7 +865,9 @@ async def write_method(request: Request):
         raise HTTPException(400, "idea or session_id with existing idea required")
 
     try:
-        methodology, review, log = run_methodology_pipeline(idea, related_papers)
+        methodology, review, log = run_methodology_pipeline(idea, related_papers,
+                                                              api_key=user.get("effective_api_key"),
+                                                              api_provider=user.get("effective_provider"))
     except Exception as e:
         raise HTTPException(500, f"Methodology generation failed: {str(e)}")
 
@@ -649,7 +891,7 @@ async def write_method(request: Request):
 
 
 @app.post("/api/write/compose")
-async def write_compose(request: Request):
+async def write_compose(request: Request, user: dict = Depends(get_current_user)):
     """Compose full paper."""
     from agents.paper_agent import compose_full_paper, format_paper_markdown
     data = await request.json()
@@ -676,7 +918,9 @@ async def write_compose(request: Request):
         raise HTTPException(400, "idea and methodology required (or session_id with existing data)")
 
     try:
-        sections, log = compose_full_paper(idea, methodology, related_papers)
+        sections, log = compose_full_paper(idea, methodology, related_papers,
+                                              api_key=user.get("effective_api_key"),
+                                              api_provider=user.get("effective_provider"))
     except Exception as e:
         raise HTTPException(500, f"Paper composition failed: {str(e)}")
 
@@ -703,7 +947,7 @@ async def write_compose(request: Request):
 
 
 @app.post("/api/write/section")
-async def write_section(request: Request):
+async def write_section(request: Request, user: dict = Depends(get_current_user)):
     """Write or revise a specific section."""
     from agents.paper_agent import compose_section, revise_section
     data = await request.json()
@@ -730,9 +974,13 @@ async def write_section(request: Request):
 
     try:
         if feedback and current_content:
-            result = revise_section(section_name, current_content, feedback)
+            result = revise_section(section_name, current_content, feedback,
+                                    api_key=user.get("effective_api_key"),
+                                    api_provider=user.get("effective_provider"))
         else:
-            result = compose_section(section_name, idea, methodology)
+            result = compose_section(section_name, idea, methodology,
+                                     api_key=user.get("effective_api_key"),
+                                     api_provider=user.get("effective_provider"))
     except Exception as e:
         raise HTTPException(500, f"Section writing failed: {str(e)}")
 
@@ -740,7 +988,7 @@ async def write_section(request: Request):
 
 
 @app.post("/api/write/chat")
-async def write_chat(request: Request):
+async def write_chat(request: Request, user: dict = Depends(get_current_user)):
     """Free-form chat with AI writer."""
     from agents.base_agent import call_llm
     data = await request.json()
@@ -773,7 +1021,9 @@ Follow the SolveEverything.org framework:
     history.append({"role": "user", "content": prompt})
 
     try:
-        reply = call_llm(writer_system, history, max_tokens=4096)
+        reply = call_llm(writer_system, history, max_tokens=4096,
+                         api_key=user.get("effective_api_key"),
+                         api_provider=user.get("effective_provider"))
     except Exception as e:
         conn.close()
         raise HTTPException(500, f"AI writing failed: {str(e)}")
@@ -853,24 +1103,48 @@ async def dashboard_stats():
 # ═══════════════════════════════════════════════════════════════════
 
 @app.get("/scientist", response_class=HTMLResponse)
-async def scientist_page(request: Request):
-    return templates.TemplateResponse("scientist.html", {"request": request})
+async def scientist_page(request: Request, user: dict = Depends(get_optional_user)):
+    if not user:
+        return RedirectResponse("/login")
+    return templates.TemplateResponse("scientist.html", {"request": request, "user": user})
 
 @app.get("/writer", response_class=HTMLResponse)
-async def writer_page(request: Request):
-    return templates.TemplateResponse("writer.html", {"request": request})
+async def writer_page(request: Request, user: dict = Depends(get_optional_user)):
+    if not user:
+        return RedirectResponse("/login")
+    return templates.TemplateResponse("writer.html", {"request": request, "user": user})
 
 @app.get("/reviewer", response_class=HTMLResponse)
-async def reviewer_page(request: Request):
-    return templates.TemplateResponse("reviewer.html", {"request": request})
+async def reviewer_page(request: Request, user: dict = Depends(get_optional_user)):
+    if not user:
+        return RedirectResponse("/login")
+    return templates.TemplateResponse("reviewer.html", {"request": request, "user": user})
 
 @app.get("/arena", response_class=HTMLResponse)
-async def arena_page(request: Request):
-    return templates.TemplateResponse("arena.html", {"request": request})
+async def arena_page(request: Request, user: dict = Depends(get_optional_user)):
+    return templates.TemplateResponse("arena.html", {"request": request, "user": user})
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard_page(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+async def dashboard_page(request: Request, user: dict = Depends(get_optional_user)):
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": user})
+
+@app.get("/targeting", response_class=HTMLResponse)
+async def targeting_page(request: Request, user: dict = Depends(get_optional_user)):
+    if not user:
+        return RedirectResponse("/login")
+    return templates.TemplateResponse("targeting.html", {"request": request, "user": user})
+
+@app.get("/pwm", response_class=HTMLResponse)
+async def pwm_page(request: Request, user: dict = Depends(get_optional_user)):
+    return templates.TemplateResponse("pwm.html", {"request": request, "user": user})
+
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request, user: dict = Depends(get_optional_user)):
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user})
+
+@app.get("/writer", response_class=HTMLResponse)
+async def writer_redirect(request: Request):
+    return RedirectResponse("/scientist?mode=write", status_code=301)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -883,7 +1157,7 @@ async def _sse_event(event_type: str, data: dict) -> str:
 
 
 @app.post("/api/stream/review/{paper_id}")
-async def stream_review(paper_id: str):
+async def stream_review(paper_id: str, user: dict = Depends(get_current_user)):
     """SSE stream for the full review pipeline."""
     import asyncio
 
@@ -902,7 +1176,8 @@ async def stream_review(paper_id: str):
         yield await _sse_event("status", {"step": "peer_review", "message": "Running peer review (3-layer analysis)..."})
         try:
             from orchestrator import run_full_review
-            results = run_full_review(paper_id)
+            results = run_full_review(paper_id, api_key=user.get("effective_api_key"),
+                                      api_provider=user.get("effective_provider"))
             yield await _sse_event("peer_review", {"review": results.get("peer_review", {})})
             yield await _sse_event("status", {"step": "peer_review_done", "message": "Peer review complete"})
             yield await _sse_event("redteam", {"report": results.get("redteam", {})})
@@ -925,7 +1200,7 @@ async def stream_review(paper_id: str):
 
 
 @app.post("/api/stream/write/idea")
-async def stream_idea(request: Request):
+async def stream_idea(request: Request, user: dict = Depends(get_current_user)):
     """SSE stream for idea generation."""
     data = await request.json()
     topic = data.get("topic", "")
@@ -940,7 +1215,8 @@ async def stream_idea(request: Request):
 
         try:
             from agents.idea_agent import run_idea_pipeline
-            idea, log = run_idea_pipeline(topic)
+            idea, log = run_idea_pipeline(topic, api_key=user.get("effective_api_key"),
+                                          api_provider=user.get("effective_provider"))
 
             for entry in log:
                 yield await _sse_event("log", {"entry": entry})
@@ -966,7 +1242,7 @@ async def stream_idea(request: Request):
 
 
 @app.post("/api/stream/pipeline")
-async def stream_full_pipeline(request: Request):
+async def stream_full_pipeline(request: Request, user: dict = Depends(get_current_user)):
     """SSE stream for the full AI Scientist pipeline: write → submit → review → revise."""
     data = await request.json()
     topic = data.get("topic", "")
@@ -988,7 +1264,9 @@ async def stream_full_pipeline(request: Request):
         def run_pipeline():
             try:
                 from orchestrator import run_full_pipeline
-                result = run_full_pipeline(topic, authors, callback=callback)
+                result = run_full_pipeline(topic, authors, callback=callback,
+                                           api_key=user.get("effective_api_key"),
+                                           api_provider=user.get("effective_provider"))
                 event_queue.put(("_result", result))
             except Exception as e:
                 event_queue.put(("_error", {"message": str(e)}))
@@ -1035,7 +1313,7 @@ async def stream_full_pipeline(request: Request):
 # ═══════════════════════════════════════════════════════════════════
 
 @app.post("/api/review/{paper_id}/respond")
-async def author_respond(paper_id: str, request: Request):
+async def author_respond(paper_id: str, request: Request, user: dict = Depends(get_current_user)):
     """Author responds to review with rebuttal/revisions.
 
     Request body: {
@@ -1076,6 +1354,8 @@ async def author_respond(paper_id: str, request: Request):
             paper["title"],
             review["raw_review"] if review else "",
             response_text,
+            api_key=user.get("effective_api_key"),
+            api_provider=user.get("effective_provider"),
         )
     except Exception:
         letter = response_text
@@ -1252,6 +1532,295 @@ def _md_to_latex(title, md_content):
     latex_lines.append("")
     latex_lines.append(r"\end{document}")
     return "\n".join(latex_lines)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Reference Check
+# ═══════════════════════════════════════════════════════════════════
+
+@app.post("/api/reference/check")
+async def reference_check(request: Request, user: dict = Depends(get_current_user)):
+    """Extract and verify references in a paper using LLM."""
+    from agents.base_agent import call_llm, parse_json_from_response
+    data = await request.json()
+    paper_id = data.get("paper_id")
+    full_text = data.get("full_text", "")
+
+    if paper_id and not full_text:
+        conn = get_db()
+        paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+        conn.close()
+        if paper:
+            full_text = paper["full_text"] or paper["abstract"]
+
+    if not full_text:
+        raise HTTPException(400, "full_text or paper_id required")
+
+    ref_system = """You are a Reference Checker for academic papers. Extract all references and assess each one.
+Output a JSON array (no wrapper):
+[{"index":1,"citation":"full citation text","authors":["Name1"],"title":"Reference title",
+  "year":2024,"venue":"Journal or Conference","status":"verifiable|suspicious|unverifiable",
+  "notes":"Brief assessment of credibility"}]
+status meanings:
+- verifiable: complete citation with real-looking authors, title, venue, year
+- suspicious: year in future, authors/venue look wrong or inconsistent, possible hallucination
+- unverifiable: too incomplete to assess"""
+
+    prompt = f"""Extract and assess all references from this paper. Focus on the References/Bibliography section.
+
+Paper text (up to last 4000 chars where references usually are):
+{full_text[-4000:]}
+
+Return ONLY the JSON array of references."""
+
+    try:
+        response = call_llm(ref_system, [{"role": "user", "content": prompt}],
+                            max_tokens=4096, temperature=0.1,
+                            api_key=user.get("effective_api_key"),
+                            api_provider=user.get("effective_provider"))
+        references = parse_json_from_response(response)
+        if not isinstance(references, list):
+            references = []
+    except Exception as e:
+        raise HTTPException(500, f"Reference check failed: {str(e)}")
+
+    return JSONResponse({"references": references, "total": len(references)})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: PWM Computational Imaging
+# ═══════════════════════════════════════════════════════════════════
+
+@app.post("/api/pwm/analyze")
+async def pwm_analyze(request: Request, user: dict = Depends(get_current_user)):
+    """AI analysis of a computational imaging / PWM problem."""
+    from agents.base_agent import call_llm
+    data = await request.json()
+    imaging_type = data.get("imaging_type", "spectral")
+    problem = data.get("problem", "")
+    physical_params = data.get("physical_params", "")
+    goal = data.get("goal", "reconstruction")
+
+    if not problem:
+        raise HTTPException(400, "problem description is required")
+
+    pwm_system = """You are an expert in computational imaging and Physics World Models (PWM).
+You specialise in:
+- Solving inverse problems with known/learnable physical measurement operators
+- Hyperspectral imaging (CASSI, CASSI-H), lensless cameras, compressive sensing
+- Operator mismatch detection and calibration correction
+- End-to-end differentiable physics-based learning
+- Physics-constrained deep learning for imaging reconstruction
+
+Provide detailed, actionable technical analysis."""
+
+    prompt = f"""## Computational Imaging Problem Analysis
+
+**Imaging Modality:** {imaging_type}
+**Goal:** {goal}
+**Problem:** {problem}
+{f'**Physical Parameters:** {physical_params}' if physical_params else ''}
+
+Please provide a comprehensive PWM-based analysis with these sections:
+
+### 1. Problem Formulation
+Mathematical formulation of the forward model y = Φx + n, identifying the measurement operator Φ, signal x, and noise n.
+
+### 2. Key Challenges
+Main technical challenges specific to this problem (operator mismatch, noise, ill-posedness, etc.).
+
+### 3. Recommended PWM Approach
+Specific Physics World Model methodology for this problem, including:
+- Network architecture recommendations
+- How to embed the physical model as a differentiable layer
+- Training strategy and loss functions
+- Data requirements
+
+### 4. Relevant Methods & Papers
+Key algorithms and papers to compare against (algorithm names, venues, years).
+
+### 5. Evaluation Protocol
+Recommended metrics (PSNR, SSIM, SAM, etc.) and evaluation datasets.
+
+### 6. Implementation Guidance
+Practical steps to implement this approach in PyTorch/JAX.
+
+### 7. Expected Maturity Level
+Expected L0-L5 maturity level once the method is fully implemented, and what would be needed to advance."""
+
+    try:
+        analysis = call_llm(pwm_system, [{"role": "user", "content": prompt}],
+                            max_tokens=3000, temperature=0.4,
+                            api_key=user.get("effective_api_key"),
+                            api_provider=user.get("effective_provider"))
+    except Exception as e:
+        raise HTTPException(500, f"PWM analysis failed: {str(e)}")
+
+    return JSONResponse({"analysis": analysis, "imaging_type": imaging_type, "goal": goal})
+
+
+@app.post("/api/pwm/review")
+async def pwm_review(request: Request, user: dict = Depends(get_current_user)):
+    """Specialized PWM review of a computational imaging paper."""
+    from agents.base_agent import call_llm
+    data = await request.json()
+    paper_id = data.get("paper_id")
+    paper_text = data.get("paper_text", "")
+
+    if paper_id and not paper_text:
+        conn = get_db()
+        paper = conn.execute("SELECT * FROM papers WHERE paper_id = ?", (paper_id,)).fetchone()
+        conn.close()
+        if paper:
+            paper_text = f"Title: {paper['title']}\n\n{paper['abstract']}\n\n{paper['full_text'] or ''}"
+
+    if not paper_text:
+        raise HTTPException(400, "paper_id or paper_text required")
+
+    pwm_review_system = """You are a specialized reviewer for computational imaging papers using the Physics World Model (PWM) framework.
+Evaluate papers specifically on: physics model correctness, operator specification, reconstruction quality claims, reproducibility of physics parameters, and comparison with physics-based baselines."""
+
+    prompt = f"""Review this computational imaging paper from a Physics World Model perspective:
+
+{paper_text[:5000]}
+
+Evaluate:
+1. **Physics Model Correctness**: Is the measurement operator properly specified? Are physics constraints respected?
+2. **Forward Model**: Is y = Φx + n properly formulated? Is Φ realistic and well-defined?
+3. **Operator Mismatch**: Does the paper address potential calibration errors or operator mismatch?
+4. **Reconstruction Quality**: Are PSNR/SSIM/SAM metrics reported on standard datasets?
+5. **Physics Baselines**: Are traditional physics-based methods (ADMM, primal-dual, etc.) compared?
+6. **Reproducibility**: Are physical parameters (wavelengths, spatial resolution, mask patterns) fully specified?
+7. **PWM Maturity**: What L0-L5 level does this work achieve for the computational imaging field?
+8. **Key Strengths & Weaknesses**: Top 3 strengths and weaknesses from a physics-informed perspective.
+9. **Recommendation**: Accept / Minor Revision / Major Revision / Reject with justification."""
+
+    try:
+        review = call_llm(pwm_review_system, [{"role": "user", "content": prompt}],
+                          max_tokens=2500, temperature=0.3,
+                          api_key=user.get("effective_api_key"),
+                          api_provider=user.get("effective_provider"))
+    except Exception as e:
+        raise HTTPException(500, f"PWM review failed: {str(e)}")
+
+    return JSONResponse({"review": review})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Save paper output to CompareGPT directory
+# ═══════════════════════════════════════════════════════════════════
+
+COMPAREGPT_OUTPUT_DIR = Path("/home/spiritai/CompareGPT-AIScientist/output")
+
+@app.post("/api/write/save-output/{session_id}")
+async def save_paper_output(session_id: str):
+    """Save composed paper to CompareGPT output directory."""
+    conn = get_db()
+    session = conn.execute(
+        "SELECT * FROM writing_sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    conn.close()
+
+    if not session or not session["current_content"]:
+        raise HTTPException(404, "Session or paper content not found")
+
+    try:
+        out_dir = COMPAREGPT_OUTPUT_DIR / session_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        paper_path = out_dir / "paper.md"
+        paper_path.write_text(session["current_content"], encoding="utf-8")
+
+        # Also save metadata
+        meta = {
+            "session_id": session_id,
+            "title": session["title"] or "",
+            "step": session["current_step"] or "",
+            "created_at": session["created_at"],
+        }
+        (out_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+        return JSONResponse({"path": str(paper_path), "session_id": session_id})
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save output: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# API: Local Auth (register + login)
+# ═══════════════════════════════════════════════════════════════════
+
+import hashlib
+
+@app.post("/api/auth/register")
+async def local_register(request: Request):
+    """Register a local account (username + email + password)."""
+    data = await request.json()
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
+    password = data.get("password", "")
+
+    if not username or not email or not password:
+        raise HTTPException(400, "username, email, and password are required")
+    if len(password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+
+    # Hash password
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    user_id = f"local_{username.lower().replace(' ', '_')}"
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT user_id FROM users WHERE user_id = ? OR user_name = ?",
+        (user_id, username)
+    ).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(400, "Username already taken")
+
+    now = datetime.utcnow().isoformat()
+    conn.execute("""
+        INSERT INTO users (user_id, user_name, role, credit, token, sso_token, api_key,
+                          custom_api_key, custom_api_provider, created_at, updated_at)
+        VALUES (?, ?, 'user', 0, 0, ?, '', '', '', ?, ?)
+    """, (user_id, username, pw_hash, now, now))
+    conn.commit()
+    conn.close()
+
+    jwt_token = create_jwt(user_id, username, "user")
+    response = JSONResponse({"user_id": user_id, "user_name": username, "status": "registered"})
+    response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
+                        max_age=60*60*24*7, path="/")
+    return response
+
+
+@app.post("/api/auth/login")
+async def local_login(request: Request):
+    """Local login with username/email + password."""
+    data = await request.json()
+    username = (data.get("username") or "").strip()
+    password = data.get("password", "")
+
+    if not username or not password:
+        raise HTTPException(400, "username and password are required")
+
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    user_id = f"local_{username.lower().replace(' ', '_')}"
+
+    conn = get_db()
+    user = conn.execute(
+        "SELECT * FROM users WHERE (user_id = ? OR user_name = ?) AND sso_token = ?",
+        (user_id, username, pw_hash)
+    ).fetchone()
+    conn.close()
+
+    if not user:
+        raise HTTPException(401, "Invalid username or password")
+
+    jwt_token = create_jwt(user["user_id"], user["user_name"], user["role"])
+    response = JSONResponse({"user_id": user["user_id"], "user_name": user["user_name"]})
+    response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
+                        max_age=60*60*24*7, path="/")
+    return response
 
 
 if __name__ == "__main__":

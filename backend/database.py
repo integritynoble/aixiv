@@ -147,6 +147,21 @@ def init_db():
         FOREIGN KEY (paper_id) REFERENCES papers(paper_id)
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        user_name TEXT NOT NULL DEFAULT '',
+        role TEXT DEFAULT 'user',
+        credit REAL DEFAULT 0,
+        token INTEGER DEFAULT 0,
+        sso_token TEXT DEFAULT '',
+        api_key TEXT DEFAULT '',
+        custom_api_key TEXT DEFAULT '',
+        custom_api_provider TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS decision_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         paper_id TEXT NOT NULL,
@@ -158,6 +173,19 @@ def init_db():
         created_at TEXT NOT NULL,
         FOREIGN KEY (paper_id) REFERENCES papers(paper_id)
     );
+
+    CREATE TABLE IF NOT EXISTS targeting_assessments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        paper_id TEXT NOT NULL,
+        current_level TEXT NOT NULL,
+        target_level TEXT DEFAULT 'L3',
+        targeting_score REAL DEFAULT 0,
+        assessment_json TEXT DEFAULT '{}',
+        roadmap TEXT DEFAULT '',
+        model TEXT DEFAULT '',
+        created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_targeting_paper ON targeting_assessments(paper_id);
     """)
     conn.commit()
     conn.close()

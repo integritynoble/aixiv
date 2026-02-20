@@ -48,10 +48,17 @@
 .rec-badge.reject { background: #ffebee; color: #c62828; }
 
 .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
-.tab-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none; border-right: none; border-top: none; }
+.tab-btn { padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none; border-right: none; border-top: none; }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
+
+/* Left panel sub-tabs */
+.sub-tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.sub-tab-btn { padding: 7px 14px; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-left: none; border-right: none; border-top: none; }
+.sub-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.sub-tab-panel { display: none; }
+.sub-tab-panel.active { display: block; }
 
 .finding { padding: 12px 16px; border-left: 4px solid var(--border); margin-bottom: 10px; border-radius: 0 4px 4px 0; background: var(--code-bg); font-size: 14px; line-height: 1.5; }
 .finding.critical { border-left-color: #c62828; } .finding.major { border-left-color: #f57f17; }
@@ -80,6 +87,18 @@
 .diff-old { background: #ffebee; border-left: 3px solid #c62828; }
 .diff-new { background: #e8f5e9; border-left: 3px solid #2e7d32; }
 .diff-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: var(--text-muted); }
+
+/* Reference check */
+.ref-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: start; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.ref-row:last-child { border-bottom: none; }
+.ref-num { font-weight: 700; color: var(--text-muted); text-align: center; padding-top: 2px; }
+.ref-title { font-weight: 600; margin-bottom: 2px; }
+.ref-meta { font-size: 12px; color: var(--text-muted); }
+.ref-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+.ref-status.verifiable { background: #e8f5e9; color: #2e7d32; }
+.ref-status.suspicious { background: #ffebee; color: #c62828; }
+.ref-status.unverifiable { background: #f5f5f5; color: #757575; }
+
 .loading { display: none; align-items: center; gap: 8px; padding: 12px; color: var(--text-muted); font-size: 14px; }
 .loading.show { display: flex; }
 .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -94,47 +113,78 @@
     <nav>
       <a href="/">Papers</a>
       <a href="/scientist">AI Scientist</a>
-      <a href="/writer">Writer</a>
-      <a href="/reviewer" class="active">Reviewer</a>
+      <a href="/reviewer" class="active">AI Reviewer</a>
+      <a href="/pwm">PWM</a>
       <a href="/arena">Arena</a>
+      <a href="/targeting">Targeting</a>
       <a href="/dashboard">Dashboard</a>
     </nav>
   </div>
 </header>
 
+{% include '_auth_bar.html' %}
+{% include '_settings_modal.html' %}
+
 <main class="reviewer-container">
   <div class="reviewer-hero">
     <h1>AI <span class="accent">Reviewer</span></h1>
-    <p>Three-layer peer review: Standard Review + L0-L5 Maturity + Red Team Analysis</p>
+    <p>Three-layer peer review: Standard Review + L0-L5 Maturity + Red Team + Reference Check</p>
   </div>
 
   <div class="review-layout">
+    <!-- LEFT: Input Panel -->
     <div>
       <div class="card">
-        <h3>Submit Paper for Review</h3>
-        <div class="form-group">
-          <label>Paper ID (if already on aiXiv)</label>
-          <input type="text" id="review-paper-id" placeholder="e.g., aiXiv:2502.001">
+        <!-- Left sub-tabs: Review | Reference Check -->
+        <div class="sub-tab-bar">
+          <button class="sub-tab-btn active" onclick="showSubTab('submit',this)">Submit for Review</button>
+          <button class="sub-tab-btn" onclick="showSubTab('refcheck',this)">Reference Check</button>
         </div>
-        <p style="text-align:center; color:var(--text-muted); font-size:13px; margin:8px 0;">— or submit new —</p>
-        <div class="form-group"><label>Title</label><input type="text" id="review-title" placeholder="Paper title"></div>
-        <div class="form-group"><label>Authors</label><input type="text" id="review-authors" placeholder="Author names"></div>
-        <div class="form-group"><label>Abstract</label><textarea id="review-abstract" placeholder="Paper abstract"></textarea></div>
-        <div class="form-group"><label>Full Text (recommended for thorough review)</label><textarea id="review-fulltext" style="min-height:200px" placeholder="Paste full paper text here"></textarea></div>
-        <div class="form-group"><label>Categories</label><input type="text" id="review-categories" placeholder="e.g., physics.comp-img, cs.CV"></div>
-        <div class="btn-row">
-          <button class="btn-primary" onclick="runFullReview()">Full Review Pipeline</button>
-          <button class="btn-outline" onclick="runPeerOnly()">Peer Review Only</button>
-          <button class="btn-outline" onclick="runRedTeam()">Red Team Only</button>
+
+        <!-- Submit sub-panel -->
+        <div class="sub-tab-panel active" id="sub-submit">
+          <div class="form-group">
+            <label>Paper ID (if already on aiXiv)</label>
+            <input type="text" id="review-paper-id" placeholder="e.g., aiXiv:2502.001">
+          </div>
+          <p style="text-align:center;color:var(--text-muted);font-size:13px;margin:8px 0">— or submit new —</p>
+          <div class="form-group"><label>Title</label><input type="text" id="review-title" placeholder="Paper title"></div>
+          <div class="form-group"><label>Authors</label><input type="text" id="review-authors" placeholder="Author names"></div>
+          <div class="form-group"><label>Abstract</label><textarea id="review-abstract" placeholder="Paper abstract"></textarea></div>
+          <div class="form-group"><label>Full Text (recommended for thorough review)</label><textarea id="review-fulltext" style="min-height:200px" placeholder="Paste full paper text here"></textarea></div>
+          <div class="form-group"><label>Categories</label><input type="text" id="review-categories" placeholder="e.g., physics.comp-img, cs.CV"></div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="runFullReview()">Full Review Pipeline</button>
+            <button class="btn-outline" onclick="runPeerOnly()">Peer Review Only</button>
+            <button class="btn-outline" onclick="runRedTeam()">Red Team Only</button>
+          </div>
+          <div class="loading" id="loading-review"><div class="spinner"></div> <span id="loading-text">Running review...</span></div>
         </div>
-        <div class="loading" id="loading-review"><div class="spinner"></div> <span id="loading-text">Running review...</span></div>
+
+        <!-- Reference Check sub-panel -->
+        <div class="sub-tab-panel" id="sub-refcheck">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Extract and verify all references in a paper. AI checks each citation for completeness and credibility.</p>
+          <div class="form-group">
+            <label>Paper ID (auto-loads text)</label>
+            <input type="text" id="ref-paper-id" placeholder="e.g., aiXiv:2502.001 (optional)">
+          </div>
+          <div class="form-group">
+            <label>Paper Text (paste full text, or use Paper ID above)</label>
+            <textarea id="ref-fulltext" style="min-height:160px" placeholder="Paste the paper's full text or references section here..."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="runReferenceCheck()" id="btn-refcheck">Check References</button>
+          </div>
+          <div class="loading" id="loading-refcheck"><div class="spinner"></div> Extracting and verifying references...</div>
+        </div>
       </div>
     </div>
 
+    <!-- RIGHT: Results Panel -->
     <div>
       <div class="card" id="results-card" style="display:none">
         <h3>Review Results</h3>
-        <div style="text-align:center; margin-bottom:16px;">
+        <div style="text-align:center;margin-bottom:16px">
           <span class="rec-badge" id="rec-badge"></span>
           <div id="maturity-display" style="margin-top:12px"></div>
         </div>
@@ -145,16 +195,37 @@
           <button class="tab-btn active" onclick="showTab(this,'peer')">Peer Review</button>
           <button class="tab-btn" onclick="showTab(this,'redteam')">Red Team</button>
           <button class="tab-btn" onclick="showTab(this,'meta')">Meta-Review</button>
+          <button class="tab-btn" onclick="showTab(this,'references')">References</button>
           <button class="tab-btn" onclick="showTab(this,'actions')">Actions</button>
         </div>
 
         <div class="tab-content active" id="tab-peer"><div class="result-text" id="peer-content"></div></div>
         <div class="tab-content" id="tab-redteam"><div id="redteam-content"></div></div>
         <div class="tab-content" id="tab-meta"><div class="result-text" id="meta-content"></div></div>
+
+        <!-- References tab -->
+        <div class="tab-content" id="tab-references">
+          <div id="ref-results-empty" style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px">
+            Use the "Reference Check" tab on the left to run a reference analysis.
+          </div>
+          <div id="ref-results-content" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:13px;color:var(--text-muted)" id="ref-summary-line"></div>
+              <div style="display:flex;gap:6px">
+                <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:#e8f5e9;color:#2e7d32">✓ verifiable</span>
+                <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:#ffebee;color:#c62828">⚠ suspicious</span>
+                <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:#f5f5f5;color:#757575">? unverifiable</span>
+              </div>
+            </div>
+            <div id="ref-list"></div>
+          </div>
+        </div>
+
         <div class="tab-content" id="tab-actions">
           <div class="btn-row">
             <button class="btn-primary" onclick="requestRevision()">Get Revision Suggestions</button>
             <button class="btn-outline" onclick="promoteToArena()">Promote to Arena</button>
+            <button class="btn-outline" onclick="window.location='/targeting?paper='+encodeURIComponent(currentPaperId)">Run Targeting</button>
           </div>
           <div class="loading" id="loading-action"><div class="spinner"></div> Processing...</div>
           <div id="revisions-panel" style="display:none;margin-top:16px">
@@ -180,353 +251,331 @@
           </div>
         </div>
       </div>
+
+      <!-- Reference check results (standalone, shown when no review loaded) -->
+      <div class="card" id="refcheck-card" style="display:none">
+        <h3>Reference Check Results</h3>
+        <div id="refcheck-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></div>
+        <div id="refcheck-list"></div>
+      </div>
     </div>
   </div>
 </main>
 
 <footer>
   <div class="footer-inner">
-    <p>aiXiv AI Scientist — powered by the SolveEverything.org framework</p>
+    <p>aiXiv AI Reviewer — powered by the SolveEverything.org framework</p>
     <p>Operated by NextGen PlatformAI C Corp</p>
   </div>
 </footer>
 
 <script>
-let currentPaperId = '';
-function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let currentPaperId='';
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
-function showTab(btn,name) {
+function showTab(btn,name){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
 }
 
-async function apiPost(url, body) {
-  const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:body?JSON.stringify(body):undefined});
-  if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.detail||'Failed'); }
+function showSubTab(name,btn){
+  document.querySelectorAll('.sub-tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sub-tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sub-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function apiPost(url,body){
+  const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.detail||'Failed');}
   return resp.json();
 }
 
-async function ensurePaper() {
-  let pid = document.getElementById('review-paper-id').value.trim();
-  if (pid) return pid;
+async function ensurePaper(){
+  let pid=document.getElementById('review-paper-id').value.trim();
+  if(pid)return pid;
   const title=document.getElementById('review-title').value.trim();
   const abstract=document.getElementById('review-abstract').value.trim();
-  if (!title||!abstract) throw new Error('Provide paper ID or title+abstract');
+  if(!title||!abstract)throw new Error('Provide paper ID or title+abstract');
   const fd=new FormData();
-  fd.append('title',title);
-  fd.append('authors',document.getElementById('review-authors').value.trim()||'Anonymous');
-  fd.append('abstract',abstract);
-  fd.append('full_text',document.getElementById('review-fulltext').value.trim());
+  fd.append('title',title);fd.append('authors',document.getElementById('review-authors').value.trim()||'Anonymous');
+  fd.append('abstract',abstract);fd.append('full_text',document.getElementById('review-fulltext').value.trim());
   fd.append('categories',document.getElementById('review-categories').value.trim());
   const resp=await fetch('/api/submit',{method:'POST',body:fd});
-  if (!resp.ok) throw new Error('Submission failed');
+  if(!resp.ok)throw new Error('Submission failed');
   const data=await resp.json();
   document.getElementById('review-paper-id').value=data.paper_id;
   return data.paper_id;
 }
 
-function displayScores(review) {
+function displayScores(review){
   const l1=review.layer1_peer_review||review;
   const dims=['soundness','novelty','clarity','significance','reproducibility'];
   let h='';
-  dims.forEach(d=>{
-    const val=l1[d]; const score=typeof val==='object'?(val.score||'?'):(val||'?');
-    h+='<div class="score-item"><div class="score-val">'+score+'</div><div class="score-label">'+d+'</div></div>';
-  });
+  dims.forEach(d=>{const val=l1[d];const score=typeof val==='object'?(val.score||'?'):(val||'?');h+='<div class="score-item"><div class="score-val">'+score+'</div><div class="score-label">'+d+'</div></div>';});
   h+='<div class="score-item"><div class="score-val">'+(review.overall_score||'?')+'</div><div class="score-label">Overall /10</div></div>';
   document.getElementById('scores-grid').innerHTML=h;
 }
 
-function displayMaturity(level) {
-  const levels=['L0','L1','L2','L3','L4','L5'];
-  const idx=levels.indexOf(level);
+function displayMaturity(level){
+  const levels=['L0','L1','L2','L3','L4','L5'];const idx=levels.indexOf(level);
   let h='<div class="maturity-bar">';
-  levels.forEach((l,i)=>{ h+='<div class="maturity-seg '+l.toLowerCase()+(i<=idx?' reached':'')+'">'+l+'</div>'; });
+  levels.forEach((l,i)=>{h+='<div class="maturity-seg '+l.toLowerCase()+(i<=idx?' reached':'')+'">'+l+'</div>';});
   h+='</div>';
   document.getElementById('maturity-display').innerHTML=h;
 }
 
-function displayRec(rec) {
+function displayRec(rec){
   const b=document.getElementById('rec-badge');
   b.className='rec-badge '+(rec||'').replace(/ /g,'_');
   b.textContent=(rec||'pending').replace(/_/g,' ');
 }
 
-function displayPeer(review) {
-  const l1=review.layer1_peer_review||{};
-  let h='';
-  if (review.summary) h+='<strong>Summary:</strong> '+esc(review.summary)+'\n\n';
+function displayPeer(review){
+  const l1=review.layer1_peer_review||{};let h='';
+  if(review.summary)h+='<strong>Summary:</strong> '+esc(review.summary)+'\n\n';
   ['strengths','weaknesses','questions'].forEach(k=>{
-    if (l1[k]) {
-      h+='<strong>'+k.charAt(0).toUpperCase()+k.slice(1)+':</strong>\n';
-      (Array.isArray(l1[k])?l1[k]:[l1[k]]).forEach(s=>h+='  '+esc(s)+'\n');
-      h+='\n';
-    }
+    if(l1[k]){h+='<strong>'+k.charAt(0).toUpperCase()+k.slice(1)+':</strong>\n';(Array.isArray(l1[k])?l1[k]:[l1[k]]).forEach(s=>h+='  '+esc(s)+'\n');h+='\n';}
   });
-  if (review.detailed_feedback) h+='<strong>Detailed Feedback:</strong>\n'+esc(review.detailed_feedback);
+  if(review.detailed_feedback)h+='<strong>Detailed Feedback:</strong>\n'+esc(review.detailed_feedback);
   document.getElementById('peer-content').innerHTML=h;
 }
 
-function displayRedTeam(rt) {
+function displayRedTeam(rt){
   let h='<div style="margin-bottom:12px"><strong>Risk:</strong> '+esc(rt.overall_risk||'?')+' | <strong>Confidence:</strong> '+(rt.confidence_in_conclusions||'?')+'</div>';
-  if (rt.summary) h+='<p style="margin-bottom:12px">'+esc(rt.summary)+'</p>';
+  if(rt.summary)h+='<p style="margin-bottom:12px">'+esc(rt.summary)+'</p>';
   (rt.findings||[]).forEach(f=>{
     const sev=f.severity||'minor';
-    h+='<div class="finding '+sev+'"><div class="finding-header"><strong>'+esc((f.id||'')+': '+(f.title||''))+'</strong>';
-    h+='<span class="finding-sev '+sev+'">'+sev+'</span></div>';
+    h+='<div class="finding '+sev+'"><div class="finding-header"><strong>'+esc((f.id||'')+': '+(f.title||''))+'</strong><span class="finding-sev '+sev+'">'+sev+'</span></div>';
     h+='<div style="font-size:13px;margin-top:4px">'+esc(f.description||'')+'</div>';
-    if (f.recommendation) h+='<div style="font-size:12px;color:#2e7d32;margin-top:4px"><strong>Fix:</strong> '+esc(f.recommendation)+'</div>';
+    if(f.recommendation)h+='<div style="font-size:12px;color:#2e7d32;margin-top:4px"><strong>Fix:</strong> '+esc(f.recommendation)+'</div>';
     h+='</div>';
   });
   document.getElementById('redteam-content').innerHTML=h;
 }
 
-function displayMeta(meta) {
+function displayMeta(meta){
   let h='<strong>Recommendation:</strong> '+esc((meta.final_recommendation||'?').replace(/_/g,' '))+'\n';
   h+='<strong>Confidence:</strong> '+(meta.confidence||'?')+'\n';
   h+='<strong>Arena Eligible:</strong> '+(meta.arena_eligible?'Yes':'No')+'\n\n';
-  if (meta.justification) h+=esc(meta.justification)+'\n\n';
-  if (meta.required_changes&&meta.required_changes.length) {
-    h+='<strong>Required Changes:</strong>\n';
-    meta.required_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');
-    h+='\n';
-  }
-  if (meta.suggested_changes&&meta.suggested_changes.length) {
-    h+='<strong>Suggested Changes:</strong>\n';
-    meta.suggested_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');
-    h+='\n';
-  }
-  if (meta.summary_for_authors) h+='<strong>Summary for Authors:</strong>\n'+esc(meta.summary_for_authors);
+  if(meta.justification)h+=esc(meta.justification)+'\n\n';
+  if(meta.required_changes&&meta.required_changes.length){h+='<strong>Required Changes:</strong>\n';meta.required_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');h+='\n';}
+  if(meta.suggested_changes&&meta.suggested_changes.length){h+='<strong>Suggested Changes:</strong>\n';meta.suggested_changes.forEach(c=>h+='  ['+esc(c.id||'?')+'] '+esc(c.description||'')+'\n');h+='\n';}
+  if(meta.summary_for_authors)h+='<strong>Summary for Authors:</strong>\n'+esc(meta.summary_for_authors);
   document.getElementById('meta-content').innerHTML=h;
 }
 
-async function runFullReview() {
+async function runFullReview(){
   const ld=document.getElementById('loading-review');
-  document.getElementById('loading-text').textContent='Running full review pipeline (Peer + Red Team + Meta)...';
+  document.getElementById('loading-text').textContent='Running full review pipeline...';
   ld.classList.add('show');
-  try {
-    const pid=await ensurePaper(); currentPaperId=pid;
-    // Try SSE stream first, fall back to regular POST
-    try {
+  try{
+    const pid=await ensurePaper();currentPaperId=pid;
+    try{
       const resp=await fetch('/api/stream/review/'+encodeURIComponent(pid),{method:'POST'});
-      const reader=resp.body.getReader();
-      const decoder=new TextDecoder();
-      let buf='';
+      const reader=resp.body.getReader();const decoder=new TextDecoder();let buf='';
       while(true){
-        const {done,value}=await reader.read();
-        if(done)break;
+        const {done,value}=await reader.read();if(done)break;
         buf+=decoder.decode(value,{stream:true});
-        const events=buf.split('\n\n');
-        buf=events.pop();
+        const events=buf.split('\n\n');buf=events.pop();
         for(const ev of events){
-          const lines=ev.split('\n');
-          let etype='',edata='';
-          for(const line of lines){
-            if(line.startsWith('event: '))etype=line.slice(7);
-            if(line.startsWith('data: '))edata=line.slice(6);
-          }
+          const lines=ev.split('\n');let etype='',edata='';
+          for(const l of lines){if(l.startsWith('event: '))etype=l.slice(7);if(l.startsWith('data: '))edata=l.slice(6);}
           if(!etype)continue;
           const d=JSON.parse(edata);
           if(etype==='status')document.getElementById('loading-text').textContent=d.message||'Processing...';
           if(etype==='complete'){
             document.getElementById('results-card').style.display='block';
-            displayScores(d.peer_review||{});
-            drawRadarChart((d.peer_review||{}).layer1_peer_review||d.peer_review||{});
+            displayScores(d.peer_review||{});drawRadarChart((d.peer_review||{}).layer1_peer_review||d.peer_review||{});
             displayRec(d.meta_review?.final_recommendation||d.peer_review?.recommendation);
-            displayMaturity(d.maturity_level||'L0');
-            displayPeer(d.peer_review||{});
-            displayRedTeam(d.redteam||{});
-            displayMeta(d.meta_review||{});
+            displayMaturity(d.maturity_level||'L0');displayPeer(d.peer_review||{});displayRedTeam(d.redteam||{});displayMeta(d.meta_review||{});
           }
           if(etype==='error')throw new Error(d.message);
         }
       }
-    } catch(streamErr) {
-      // Fallback to regular endpoint
+    }catch(streamErr){
       const data=await apiPost('/api/review/'+encodeURIComponent(pid));
       document.getElementById('results-card').style.display='block';
-      displayScores(data.peer_review||{});
-      drawRadarChart((data.peer_review||{}).layer1_peer_review||data.peer_review||{});
+      displayScores(data.peer_review||{});drawRadarChart((data.peer_review||{}).layer1_peer_review||data.peer_review||{});
       displayRec(data.meta_review?.final_recommendation||data.peer_review?.recommendation);
-      displayMaturity(data.maturity_level||'L0');
-      displayPeer(data.peer_review||{});
-      displayRedTeam(data.redteam||{});
-      displayMeta(data.meta_review||{});
+      displayMaturity(data.maturity_level||'L0');displayPeer(data.peer_review||{});displayRedTeam(data.redteam||{});displayMeta(data.meta_review||{});
     }
-  } catch(e) { alert('Error: '+e.message); }
+  }catch(e){alert('Error: '+e.message);}
   ld.classList.remove('show');
 }
 
-async function runPeerOnly() {
+async function runPeerOnly(){
   const ld=document.getElementById('loading-review');
-  document.getElementById('loading-text').textContent='Running peer review...';
-  ld.classList.add('show');
-  try {
-    const pid=await ensurePaper(); currentPaperId=pid;
+  document.getElementById('loading-text').textContent='Running peer review...';ld.classList.add('show');
+  try{
+    const pid=await ensurePaper();currentPaperId=pid;
     const data=await apiPost('/api/review/'+encodeURIComponent(pid)+'/peer');
     document.getElementById('results-card').style.display='block';
-    displayScores(data.review||{});
-    drawRadarChart((data.review||{}).layer1_peer_review||data.review||{});
-    displayRec(data.review?.recommendation);
-    displayPeer(data.review||{});
-  } catch(e) { alert('Error: '+e.message); }
+    displayScores(data.review||{});drawRadarChart((data.review||{}).layer1_peer_review||data.review||{});
+    displayRec(data.review?.recommendation);displayPeer(data.review||{});
+  }catch(e){alert('Error: '+e.message);}
   ld.classList.remove('show');
 }
 
-async function runRedTeam() {
+async function runRedTeam(){
   const ld=document.getElementById('loading-review');
-  document.getElementById('loading-text').textContent='Running red team analysis...';
-  ld.classList.add('show');
-  try {
-    const pid=await ensurePaper(); currentPaperId=pid;
+  document.getElementById('loading-text').textContent='Running red team analysis...';ld.classList.add('show');
+  try{
+    const pid=await ensurePaper();currentPaperId=pid;
     const data=await apiPost('/api/review/'+encodeURIComponent(pid)+'/redteam');
-    document.getElementById('results-card').style.display='block';
-    displayRedTeam(data.redteam||{});
-  } catch(e) { alert('Error: '+e.message); }
+    document.getElementById('results-card').style.display='block';displayRedTeam(data.redteam||{});
+  }catch(e){alert('Error: '+e.message);}
   ld.classList.remove('show');
 }
 
-let currentRevisions = [];
+// ── Reference Check ───────────────────────────────────────────────
+async function runReferenceCheck(){
+  const paperId=document.getElementById('ref-paper-id').value.trim();
+  let fullText=document.getElementById('ref-fulltext').value.trim();
 
-async function requestRevision() {
-  if (!currentPaperId) return alert('No paper selected');
+  // Auto-load paper text if paper ID given and no text
+  if(paperId&&!fullText){
+    try{
+      const resp=await fetch('/api/paper/'+encodeURIComponent(paperId));
+      if(resp.ok){const p=await resp.json();fullText=p.full_text||p.abstract||'';document.getElementById('ref-fulltext').value=fullText;currentPaperId=paperId;}
+    }catch(e){}
+  }
+  if(!fullText&&!paperId)return alert('Please enter paper text or a paper ID');
+
+  document.getElementById('btn-refcheck').disabled=true;
+  document.getElementById('loading-refcheck').classList.add('show');
+
+  try{
+    const body={full_text:fullText};
+    if(paperId)body.paper_id=paperId;
+    const data=await apiPost('/api/reference/check',body);
+    renderRefResults(data);
+  }catch(e){alert('Error: '+e.message);}
+
+  document.getElementById('btn-refcheck').disabled=false;
+  document.getElementById('loading-refcheck').classList.remove('show');
+}
+
+function renderRefResults(data){
+  const refs=data.references||[];
+  const total=refs.length;
+  const verifiable=refs.filter(r=>r.status==='verifiable').length;
+  const suspicious=refs.filter(r=>r.status==='suspicious').length;
+  const summaryText=`${total} references found — ${verifiable} verifiable, ${suspicious} suspicious, ${total-verifiable-suspicious} unverifiable`;
+
+  // If review results card is open, show in References tab
+  if(document.getElementById('results-card').style.display!=='none'){
+    document.getElementById('ref-results-empty').style.display='none';
+    document.getElementById('ref-results-content').style.display='block';
+    document.getElementById('ref-summary-line').textContent=summaryText;
+    document.getElementById('ref-list').innerHTML=buildRefHTML(refs);
+    // Switch to References tab
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-references').classList.add('active');
+    document.querySelector('[onclick*="references"]').classList.add('active');
+  }else{
+    // Show standalone results card
+    document.getElementById('refcheck-card').style.display='block';
+    document.getElementById('refcheck-summary').textContent=summaryText;
+    document.getElementById('refcheck-list').innerHTML=buildRefHTML(refs);
+    document.getElementById('refcheck-card').scrollIntoView({behavior:'smooth'});
+  }
+}
+
+function buildRefHTML(refs){
+  if(!refs.length)return '<p style="color:var(--text-muted);font-size:14px">No references extracted.</p>';
+  return refs.map(r=>`
+    <div class="ref-row">
+      <div class="ref-num">[${r.index||'?'}]</div>
+      <div>
+        <div class="ref-title">${esc(r.title||'Unknown title')}</div>
+        <div class="ref-meta">${esc((r.authors||[]).join(', ')||r.citation||'')} ${r.year?'('+r.year+')':''} ${r.venue?'— '+r.venue:''}</div>
+        ${r.notes?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(r.notes)}</div>`:''}
+      </div>
+      <div><span class="ref-status ${r.status||'unverifiable'}">${r.status||'?'}</span></div>
+    </div>`).join('');
+}
+
+let currentRevisions=[];
+async function requestRevision(){
+  if(!currentPaperId)return alert('No paper selected');
   document.getElementById('loading-action').classList.add('show');
-  try {
+  try{
     const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId));
-    const revs=data.revisions||{};
-    currentRevisions = revs.revision_suggestions||[];
-
-    if (currentRevisions.length) {
+    const revs=data.revisions||{};currentRevisions=revs.revision_suggestions||[];
+    if(currentRevisions.length){
       let h='';
       currentRevisions.forEach((r,i)=>{
         const priCls=(r.priority||'suggested')==='required'?'required':'suggested';
-        h+='<div class="rev-item">';
-        h+='<div class="rev-header">';
-        h+='<input type="checkbox" checked data-rev-id="'+esc(r.id||'REV-'+(i+1))+'" class="rev-cb">';
-        h+='<span class="rev-id">'+esc(r.id||'REV-'+(i+1))+'</span>';
-        h+='<span class="rev-priority '+priCls+'">'+esc(r.priority||'suggested')+'</span>';
-        h+='<span class="rev-section">'+esc(r.section||'')+'</span>';
-        h+='</div>';
+        h+='<div class="rev-item"><div class="rev-header"><input type="checkbox" checked data-rev-id="'+esc(r.id||'REV-'+(i+1))+'" class="rev-cb"><span class="rev-id">'+esc(r.id||'REV-'+(i+1))+'</span><span class="rev-priority '+priCls+'">'+esc(r.priority||'suggested')+'</span><span class="rev-section">'+esc(r.section||'')+'</span></div>';
         h+='<div class="rev-body">';
-        if(r.reviewer_concern) h+='<div class="rev-concern">'+esc(r.reviewer_concern)+'</div>';
-        if(r.original_text||r.revised_text) {
-          h+='<div class="diff-view">';
-          h+='<div><div class="diff-label">Original</div><div class="diff-old">'+esc(r.original_text||'(no original)')+'</div></div>';
-          h+='<div><div class="diff-label">Revised</div><div class="diff-new">'+esc(r.revised_text||'(no revision)')+'</div></div>';
-          h+='</div>';
-        }
-        if(r.explanation) h+='<div style="margin-top:8px;font-size:12px;color:#2e7d32"><strong>Why:</strong> '+esc(r.explanation)+'</div>';
+        if(r.reviewer_concern)h+='<div class="rev-concern">'+esc(r.reviewer_concern)+'</div>';
+        if(r.original_text||r.revised_text){h+='<div class="diff-view"><div><div class="diff-label">Original</div><div class="diff-old">'+esc(r.original_text||'(none)')+'</div></div><div><div class="diff-label">Revised</div><div class="diff-new">'+esc(r.revised_text||'(none)')+'</div></div></div>';}
+        if(r.explanation)h+='<div style="margin-top:8px;font-size:12px;color:#2e7d32"><strong>Why:</strong> '+esc(r.explanation)+'</div>';
         h+='</div></div>';
       });
-      document.getElementById('revisions-list').innerHTML=h;
-      document.getElementById('revisions-panel').style.display='block';
+      document.getElementById('revisions-list').innerHTML=h;document.getElementById('revisions-panel').style.display='block';
     }
-
-    if (revs.revision_letter) {
-      document.getElementById('action-result').innerHTML='<strong>Revision Letter</strong>\n'+esc(revs.revision_letter);
-    }
-  } catch(e) { alert('Error: '+e.message); }
+    if(revs.revision_letter)document.getElementById('action-result').innerHTML='<strong>Revision Letter</strong>\n'+esc(revs.revision_letter);
+  }catch(e){alert('Error: '+e.message);}
   document.getElementById('loading-action').classList.remove('show');
 }
 
-async function applySelectedRevisions() {
-  if (!currentPaperId) return alert('No paper selected');
+async function applySelectedRevisions(){
+  if(!currentPaperId)return alert('No paper selected');
   const cbs=document.querySelectorAll('.rev-cb');
-  const accepted=[], rejected=[];
-  cbs.forEach(cb=>{
-    if(cb.checked) accepted.push(cb.dataset.revId);
-    else rejected.push(cb.dataset.revId);
-  });
-  if(!accepted.length) return alert('No revisions selected');
-  if(!confirm('Apply '+accepted.length+' revision(s) to the paper?')) return;
+  const accepted=[],rejected=[];
+  cbs.forEach(cb=>{if(cb.checked)accepted.push(cb.dataset.revId);else rejected.push(cb.dataset.revId);});
+  if(!accepted.length)return alert('No revisions selected');
+  if(!confirm('Apply '+accepted.length+' revision(s)?'))return;
   document.getElementById('loading-action').classList.add('show');
-  try {
-    const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId)+'/apply',{
-      accepted_ids:accepted, rejected_ids:rejected
-    });
-    document.getElementById('apply-result').innerHTML=
-      '<strong>Applied '+data.applied.length+' revision(s) (v'+data.version+')</strong>\n'+
-      'Rejected: '+(data.rejected.length||'none')+'\n\n'+
-      '<strong>Preview:</strong>\n'+esc(data.revised_text_preview||'');
-  } catch(e) { alert('Error: '+e.message); }
+  try{
+    const data=await apiPost('/api/revise/'+encodeURIComponent(currentPaperId)+'/apply',{accepted_ids:accepted,rejected_ids:rejected});
+    document.getElementById('apply-result').innerHTML='<strong>Applied '+data.applied.length+' revision(s) (v'+data.version+')</strong>\n\n<strong>Preview:</strong>\n'+esc(data.revised_text_preview||'');
+  }catch(e){alert('Error: '+e.message);}
   document.getElementById('loading-action').classList.remove('show');
 }
 
-async function promoteToArena() {
-  if (!currentPaperId) return alert('No paper selected');
-  if (!confirm('Promote this paper to the Arena?')) return;
-  try {
+async function promoteToArena(){
+  if(!currentPaperId)return alert('No paper selected');
+  if(!confirm('Promote this paper to the Arena?'))return;
+  try{
     const data=await apiPost('/api/promote/'+encodeURIComponent(currentPaperId));
-    document.getElementById('action-result').innerHTML=
-      '<strong>Promoted to Arena!</strong>\nScore: '+data.review_score+'\nMaturity: '+data.maturity_level+'\nBadges: '+(data.badges||[]).join(', ');
-  } catch(e) { alert('Error: '+e.message); }
+    document.getElementById('action-result').innerHTML='<strong>Promoted to Arena!</strong>\nScore: '+data.review_score+'\nMaturity: '+data.maturity_level+'\nBadges: '+(data.badges||[]).join(', ');
+  }catch(e){alert('Error: '+e.message);}
 }
 
-async function submitAuthorResponse() {
-  if (!currentPaperId) return alert('No paper selected');
+async function submitAuthorResponse(){
+  if(!currentPaperId)return alert('No paper selected');
   const responseText=document.getElementById('author-response').value.trim();
-  if (!responseText) return alert('Please enter a response');
+  if(!responseText)return alert('Please enter a response');
   const items=document.getElementById('addressed-items').value.split(',').map(s=>s.trim()).filter(Boolean);
   document.getElementById('loading-respond').classList.add('show');
-  try {
-    const data=await apiPost('/api/review/'+encodeURIComponent(currentPaperId)+'/respond',{
-      response_text:responseText, addressed_items:items
-    });
-    document.getElementById('respond-result').innerHTML=
-      '<strong>Response submitted (v'+data.version+')</strong>\nStatus: '+data.status+'\n\n'+esc(data.revision_letter||'');
-  } catch(e) { alert('Error: '+e.message); }
+  try{
+    const data=await apiPost('/api/review/'+encodeURIComponent(currentPaperId)+'/respond',{response_text:responseText,addressed_items:items});
+    document.getElementById('respond-result').innerHTML='<strong>Response submitted (v'+data.version+')</strong>\nStatus: '+data.status+'\n\n'+esc(data.revision_letter||'');
+  }catch(e){alert('Error: '+e.message);}
   document.getElementById('loading-respond').classList.remove('show');
 }
 
-function drawRadarChart(scores) {
-  const canvas=document.getElementById('radar-chart');
-  if (!canvas) return;
+function drawRadarChart(scores){
+  const canvas=document.getElementById('radar-chart');if(!canvas)return;
   const dims=['soundness','novelty','clarity','significance','reproducibility'];
-  const vals=dims.map(d=>{
-    const v=scores[d]; return typeof v==='object'?(v.score||0):(v||0);
-  });
-  if (vals.every(v=>v===0)) { canvas.style.display='none'; return; }
+  const vals=dims.map(d=>{const v=scores[d];return typeof v==='object'?(v.score||0):(v||0);});
+  if(vals.every(v=>v===0)){canvas.style.display='none';return;}
   canvas.style.display='block';
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, R=100;
+  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,R=100;
   ctx.clearRect(0,0,W,H);
-  const n=dims.length, step=2*Math.PI/n, offset=-Math.PI/2;
-
-  // Grid
-  [0.2,0.4,0.6,0.8,1.0].forEach(r=>{
-    ctx.beginPath();
-    for(let i=0;i<=n;i++){const a=offset+i*step;ctx.lineTo(cx+R*r*Math.cos(a),cy+R*r*Math.sin(a));}
-    ctx.closePath(); ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.stroke();
-  });
-
-  // Axes + labels
-  ctx.font='11px sans-serif'; ctx.fillStyle='#666'; ctx.textAlign='center';
-  dims.forEach((d,i)=>{
-    const a=offset+i*step;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
-    ctx.strokeStyle='#bbb'; ctx.stroke();
-    const lx=cx+(R+18)*Math.cos(a), ly=cy+(R+18)*Math.sin(a);
-    ctx.fillText(d.charAt(0).toUpperCase()+d.slice(1),lx,ly+4);
-  });
-
-  // Data polygon
-  ctx.beginPath();
-  vals.forEach((v,i)=>{
-    const a=offset+i*step, r=R*(v/10);
-    if(i===0) ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
-    else ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));
-  });
-  ctx.closePath(); ctx.fillStyle='rgba(180,50,50,0.2)'; ctx.fill();
-  ctx.strokeStyle='#b71c1c'; ctx.lineWidth=2; ctx.stroke();
-
-  // Data points
-  vals.forEach((v,i)=>{
-    const a=offset+i*step, r=R*(v/10);
-    ctx.beginPath(); ctx.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),4,0,2*Math.PI);
-    ctx.fillStyle='#b71c1c'; ctx.fill();
-  });
+  const n=dims.length,step=2*Math.PI/n,offset=-Math.PI/2;
+  [0.2,0.4,0.6,0.8,1.0].forEach(r=>{ctx.beginPath();for(let i=0;i<=n;i++){const a=offset+i*step;ctx.lineTo(cx+R*r*Math.cos(a),cy+R*r*Math.sin(a));}ctx.closePath();ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.stroke();});
+  ctx.font='11px sans-serif';ctx.fillStyle='#666';ctx.textAlign='center';
+  dims.forEach((d,i)=>{const a=offset+i*step;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.strokeStyle='#bbb';ctx.stroke();const lx=cx+(R+18)*Math.cos(a),ly=cy+(R+18)*Math.sin(a);ctx.fillText(d.charAt(0).toUpperCase()+d.slice(1),lx,ly+4);});
+  ctx.beginPath();vals.forEach((v,i)=>{const a=offset+i*step,r=R*(v/10);if(i===0)ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));else ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));});
+  ctx.closePath();ctx.fillStyle='rgba(180,50,50,0.2)';ctx.fill();ctx.strokeStyle='#b71c1c';ctx.lineWidth=2;ctx.stroke();
+  vals.forEach((v,i)=>{const a=offset+i*step,r=R*(v/10);ctx.beginPath();ctx.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),4,0,2*Math.PI);ctx.fillStyle='#b71c1c';ctx.fill();});
 }
 </script>
 </body>

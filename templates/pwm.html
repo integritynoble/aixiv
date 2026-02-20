@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PWM — Physics World Model - aiXiv</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.pwm-container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+.pwm-hero { text-align: center; margin-bottom: 36px; }
+.pwm-hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.pwm-hero h1 .accent { color: var(--accent); }
+.pwm-hero p { font-size: 15px; color: var(--text-muted); max-width: 660px; margin: 0 auto; }
+.pwm-badge { display: inline-block; background: linear-gradient(135deg,#1565c0,#6a1b9a); color:white; padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.card h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+
+.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+@media (max-width: 700px) { .feat-grid { grid-template-columns: 1fr; } }
+.feat-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.feat-icon { font-size: 28px; margin-bottom: 8px; }
+.feat-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.feat-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+.tab-btn { padding: 8px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none; border-right: none; border-top: none; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+.form-group textarea, .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box; background: var(--card-bg); }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.btn-primary { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: linear-gradient(135deg,#1565c0,#6a1b9a); color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.btn-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); text-decoration: none; font-weight: 500; }
+.btn-link:hover { background: var(--code-bg); }
+
+.log-panel { background: #0d1117; color: #c9d1d9; border-radius: var(--radius); padding: 16px; font-family: 'SF Mono','Fira Code',monospace; font-size: 13px; line-height: 1.7; max-height: 400px; overflow-y: auto; margin-top: 16px; }
+.log-line .step { color: #58a6ff; font-weight: 700; }
+.log-line .ok { color: #3fb950; }
+.log-line .err { color: #ff7b72; }
+.log-line .info { color: #e3b341; }
+
+.result-box { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-top: 14px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; max-height: 600px; overflow-y: auto; }
+
+.loading { display: none; align-items: center; gap: 8px; padding: 12px 0; color: var(--text-muted); font-size: 14px; }
+.loading.show { display: flex; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.imaging-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.img-type-btn { padding: 10px; border: 2px solid var(--border); border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; background: var(--card-bg); }
+.img-type-btn:hover, .img-type-btn.selected { border-color: var(--accent); background: #eef2ff; color: var(--accent); }
+.img-type-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+.result-section { margin-bottom: 16px; }
+.result-section h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--accent); }
+.result-tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+.tag-blue { background: #e3f2fd; color: #1565c0; }
+.tag-green { background: #e8f5e9; color: #2e7d32; }
+.tag-orange { background: #fff3e0; color: #f57c00; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="/">Papers</a>
+      <a href="/scientist">AI Scientist</a>
+      <a href="/reviewer">AI Reviewer</a>
+      <a href="/pwm" class="active">PWM</a>
+      <a href="/arena">Arena</a>
+      <a href="/targeting">Targeting</a>
+      <a href="/dashboard">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+{% include '_auth_bar.html' %}
+{% include '_settings_modal.html' %}
+
+<div class="pwm-container">
+  <div class="pwm-hero">
+    <div class="pwm-badge">Physics World Model</div>
+    <h1>Computational <span class="accent">Imaging</span> AI</h1>
+    <p>AI-powered analysis for computational imaging problems — spectral imaging, lensless cameras, compressive sensing, and other physics-constrained inverse problems.</p>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank" class="btn-link">⬡ GitHub: Physics_World_Model</a>
+      <a href="/scientist?mode=write" class="btn-link">✏️ Write a PWM Paper</a>
+    </div>
+  </div>
+
+  <!-- Feature overview -->
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-icon">🔬</div><div class="feat-title">Physics-Constrained Models</div><div class="feat-desc">Solve inverse problems with known physical measurement operators (PSFs, masks, matrices).</div></div>
+    <div class="feat-card"><div class="feat-icon">🌈</div><div class="feat-title">Spectral Imaging</div><div class="feat-desc">CASSI, CASSI-H, RGB + spectral reconstruction from compressed measurements.</div></div>
+    <div class="feat-card"><div class="feat-icon">📡</div><div class="feat-title">Lensless & Compressive</div><div class="feat-desc">Lensless camera reconstruction, compressive sensing, aperture coding.</div></div>
+    <div class="feat-card"><div class="feat-icon">⚙️</div><div class="feat-title">Operator Learning</div><div class="feat-desc">Learn or refine measurement operators end-to-end with physics priors.</div></div>
+    <div class="feat-card"><div class="feat-icon">🧪</div><div class="feat-title">Calibration Correction</div><div class="feat-desc">Detect and correct operator mismatch using differentiable physics models.</div></div>
+    <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Benchmark Analysis</div><div class="feat-desc">Evaluate reconstruction quality (PSNR, SSIM, SAM) across standard datasets.</div></div>
+  </div>
+
+  <!-- Main task interface -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('analyze',this)">Analyze Problem</button>
+    <button class="tab-btn" onclick="switchTab('review',this)">Review PWM Paper</button>
+    <button class="tab-btn" onclick="switchTab('about',this)">About PWM</button>
+  </div>
+
+  <!-- Analyze tab -->
+  <div class="tab-pane active" id="tab-analyze">
+    <div class="card">
+      <h3>Computational Imaging Problem Analysis</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Describe your imaging problem and get AI-powered analysis: problem formulation, suggested PWM approach, relevant papers, and implementation guidance.</p>
+
+      <div class="form-group"><label>Imaging Modality</label>
+        <div class="imaging-type-grid">
+          <div class="img-type-btn selected" onclick="selectType(this,'spectral')"><span class="img-type-icon">🌈</span>Spectral</div>
+          <div class="img-type-btn" onclick="selectType(this,'lensless')"><span class="img-type-icon">📷</span>Lensless</div>
+          <div class="img-type-btn" onclick="selectType(this,'compressed')"><span class="img-type-icon">📦</span>Compressed</div>
+          <div class="img-type-btn" onclick="selectType(this,'mri')"><span class="img-type-icon">🧬</span>MRI/CT</div>
+          <div class="img-type-btn" onclick="selectType(this,'lidar')"><span class="img-type-icon">📡</span>LiDAR</div>
+          <div class="img-type-btn" onclick="selectType(this,'other')"><span class="img-type-icon">🔬</span>Other</div>
+        </div>
+        <input type="hidden" id="imaging-type" value="spectral">
+      </div>
+
+      <div class="form-group">
+        <label>Problem Description</label>
+        <textarea id="pwm-problem" placeholder="Describe your imaging problem in detail. e.g., I am working on CASSI hyperspectral imaging reconstruction. My measurement matrix has calibration errors causing mismatch between the assumed and actual physical model. I want to develop a method to correct this..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Known Physical Parameters (optional)</label>
+        <input type="text" id="pwm-params" placeholder="e.g., wavelength range: 450-650nm, 24 spectral bands, spatial resolution: 256x256, sensing matrix: random Gaussian">
+      </div>
+
+      <div class="form-group">
+        <label>Goal</label>
+        <select id="pwm-goal">
+          <option value="reconstruction">Reconstruct the original signal from measurements</option>
+          <option value="calibration">Detect / correct calibration errors in the measurement operator</option>
+          <option value="operator_learning">Learn the measurement operator end-to-end</option>
+          <option value="benchmark">Benchmark reconstruction algorithms</option>
+          <option value="review">Get a literature review of relevant methods</option>
+        </select>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="runPWMAnalysis()" id="btn-pwm">Analyze with PWM AI</button>
+      </div>
+      <div class="loading" id="loading-pwm"><div class="spinner"></div> Running PWM analysis...</div>
+    </div>
+
+    <div id="pwm-results" style="display:none">
+      <div class="card">
+        <h3>PWM Analysis Results</h3>
+        <div id="pwm-output" class="result-box"></div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn-primary" onclick="exportPWMResult()">Export Analysis</button>
+          <a href="/scientist?mode=write" class="btn-link" style="text-decoration:none">Write Paper →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review PWM Paper tab -->
+  <div class="tab-pane" id="tab-review">
+    <div class="card">
+      <h3>Review a Computational Imaging Paper</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Get specialized AI review for PWM/computational imaging papers — evaluates physics correctness, reconstruction quality, and reproducibility.</p>
+      <div class="form-group"><label>Paper ID (on aiXiv)</label><input type="text" id="pwm-paper-id" placeholder="e.g., aiXiv:2502.001"></div>
+      <div class="form-group"><label>Or paste Abstract + Key Methods</label><textarea id="pwm-paper-text" placeholder="Paste the abstract and methods section..."></textarea></div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="runPWMReview()" id="btn-pwm-review">Run PWM Review</button>
+      </div>
+      <div class="loading" id="loading-pwm-review"><div class="spinner"></div> Analyzing paper against PWM criteria...</div>
+    </div>
+    <div id="pwm-review-results" style="display:none">
+      <div class="card">
+        <h3>PWM Review Results</h3>
+        <div id="pwm-review-output" class="result-box"></div>
+        <div class="btn-row" style="margin-top:14px">
+          <a href="/reviewer" class="btn-link" style="text-decoration:none">Full AI Review →</a>
+          <a href="/targeting" class="btn-link" style="text-decoration:none">Targeting Assessment →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About tab -->
+  <div class="tab-pane" id="tab-about">
+    <div class="card">
+      <h3>About Physics World Model (PWM)</h3>
+      <p style="font-size:14px;line-height:1.7;color:var(--text-muted)">
+        The <strong style="color:var(--text)">Physics World Model (PWM)</strong> framework addresses a fundamental challenge in computational imaging: the measurement operator (the mathematical model of how the camera captures data) is rarely perfectly known. Real-world imaging systems suffer from calibration errors, manufacturing tolerances, and environmental variations.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+        <div style="background:var(--code-bg);padding:16px;border-radius:8px;border-left:3px solid #1565c0">
+          <h4 style="font-size:13px;margin-bottom:8px">Core Problem</h4>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5">Operator mismatch between assumed physical model Φ̂ and true operator Φ causes reconstruction degradation. PWM learns to estimate and compensate for this mismatch.</p>
+        </div>
+        <div style="background:var(--code-bg);padding:16px;border-radius:8px;border-left:3px solid #43a047">
+          <h4 style="font-size:13px;margin-bottom:8px">Key Insight</h4>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5">By embedding the physical measurement model as a differentiable layer, we can jointly optimize reconstruction quality and operator calibration end-to-end.</p>
+        </div>
+        <div style="background:var(--code-bg);padding:16px;border-radius:8px;border-left:3px solid #f57c00">
+          <h4 style="font-size:13px;margin-bottom:8px">Applications</h4>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5">CASSI hyperspectral imaging, lensless cameras, compressive sensing, MRI reconstruction, LiDAR point cloud recovery, coded aperture photography.</p>
+        </div>
+        <div style="background:var(--code-bg);padding:16px;border-radius:8px;border-left:3px solid #6a1b9a">
+          <h4 style="font-size:13px;margin-bottom:8px">On this Platform</h4>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5">Submit PWM research to aiXiv, get specialized computational imaging review, target L3-L5 maturity with the Targeting System, and compare methods in the Arena.</p>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+        <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank" class="btn-link">⬡ GitHub Repository</a>
+        <a href="/scientist?mode=write" class="btn-link">✏️ Write PWM Paper</a>
+        <a href="/targeting" class="btn-link">🎯 Run Targeting</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv AI Scientist — PWM Computational Imaging Module</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+
+<script>
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+let selectedType='spectral';
+let pwmResultText='';
+
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function selectType(el,type){
+  document.querySelectorAll('.img-type-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedType=type;
+  document.getElementById('imaging-type').value=type;
+}
+
+async function runPWMAnalysis(){
+  const problem=document.getElementById('pwm-problem').value.trim();
+  if(!problem)return alert('Please describe your imaging problem');
+  const params=document.getElementById('pwm-params').value.trim();
+  const goal=document.getElementById('pwm-goal').value;
+  const btn=document.getElementById('btn-pwm');
+  const ld=document.getElementById('loading-pwm');
+  btn.disabled=true;ld.classList.add('show');
+  document.getElementById('pwm-results').style.display='none';
+  try{
+    const resp=await fetch('/api/pwm/analyze',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imaging_type:selectedType,problem,physical_params:params,goal})
+    });
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.detail||'Analysis failed');}
+    const data=await resp.json();
+    pwmResultText=data.analysis||'';
+    document.getElementById('pwm-output').textContent=pwmResultText;
+    document.getElementById('pwm-results').style.display='block';
+    document.getElementById('pwm-results').scrollIntoView({behavior:'smooth'});
+  }catch(e){alert('Error: '+e.message);}
+  btn.disabled=false;ld.classList.remove('show');
+}
+
+async function runPWMReview(){
+  const paperId=document.getElementById('pwm-paper-id').value.trim();
+  const paperText=document.getElementById('pwm-paper-text').value.trim();
+  if(!paperId&&!paperText)return alert('Please provide a paper ID or text');
+  const btn=document.getElementById('btn-pwm-review');
+  const ld=document.getElementById('loading-pwm-review');
+  btn.disabled=true;ld.classList.add('show');
+  document.getElementById('pwm-review-results').style.display='none';
+  try{
+    const resp=await fetch('/api/pwm/review',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({paper_id:paperId,paper_text:paperText})
+    });
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.detail||'Review failed');}
+    const data=await resp.json();
+    document.getElementById('pwm-review-output').textContent=data.review||'';
+    document.getElementById('pwm-review-results').style.display='block';
+    document.getElementById('pwm-review-results').scrollIntoView({behavior:'smooth'});
+  }catch(e){alert('Error: '+e.message);}
+  btn.disabled=false;ld.classList.remove('show');
+}
+
+function exportPWMResult(){
+  if(!pwmResultText)return;
+  const blob=new Blob([pwmResultText],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='pwm_analysis.txt';a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

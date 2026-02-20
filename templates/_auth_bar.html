@@ -1,0 +1,10 @@
+<div id="auth-bar" style="background:#f8f9fa;border-bottom:1px solid #e5e7eb;padding:6px 24px;display:flex;align-items:center;justify-content:flex-end;gap:12px;font-size:0.85rem;">
+    {% if user %}
+    <span style="color:#555;">{{ user.user_name or user.user_id }}</span>
+    <a href="/profile" style="color:#6366f1;text-decoration:none;font-size:0.8rem;font-weight:500;">Profile</a>
+    <button onclick="document.getElementById('settings-modal').style.display='flex'" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.8rem;color:#555;">Settings</button>
+    <a href="/api/auth/logout" style="color:#6366f1;text-decoration:none;font-size:0.8rem;">Logout</a>
+    {% else %}
+    <a href="/login" style="color:#6366f1;text-decoration:none;font-weight:500;">Sign in</a>
+    {% endif %}
+</div>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — aiXiv</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .login-container {
+            max-width: 460px;
+            margin: 120px auto 60px;
+            padding: 48px 40px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .login-container h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: #1a1a2e;
+        }
+        .login-container .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .sso-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .sso-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99,102,241,0.35);
+        }
+        .login-footer {
+            margin-top: 28px;
+            font-size: 0.85rem;
+            color: #999;
+        }
+        .login-footer a { color: #6366f1; text-decoration: none; }
+        .login-logo {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .error-msg {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body style="background:#f5f5f7;">
+    <div class="login-container">
+        <div class="login-logo">aiXiv</div>
+        <h1>Sign In</h1>
+        <p class="subtitle">
+            Sign in with your CompareGPT account to access the AI Scientist platform.
+            Your CompareGPT API key will be used for LLM operations, or you can set a custom key after login.
+        </p>
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+        <a href="{{ sso_url }}" class="sso-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign in with CompareGPT
+        </a>
+        <div class="login-footer">
+            <p>By signing in, you agree to the <a href="#">Terms of Service</a>.</p>
+            <p style="margin-top:12px;"><a href="/">Back to Home</a></p>
+        </div>
+    </div>
+</body>
+</html>

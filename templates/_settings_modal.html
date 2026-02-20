@@ -1,0 +1,55 @@
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:32px;max-width:440px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,0.15);">
+        <h3 style="margin:0 0 6px;font-size:1.2rem;">API Key Settings</h3>
+        <p style="color:#666;font-size:0.85rem;margin:0 0 20px;">Override the SSO-provided key with your own API key.</p>
+        <label style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:4px;">Provider</label>
+        <select id="settings-provider" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;font-size:0.9rem;">
+            <option value="">Use SSO key (default)</option>
+            <option value="comparegpt">CompareGPT</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+        </select>
+        <label style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:4px;">API Key</label>
+        <input id="settings-apikey" type="password" placeholder="sk-... or cgpt_..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:20px;font-size:0.9rem;box-sizing:border-box;">
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button onclick="clearApiKey()" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;">Clear</button>
+            <button onclick="document.getElementById('settings-modal').style.display='none'" style="padding:8px 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;">Cancel</button>
+            <button onclick="saveApiKey()" style="padding:8px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;cursor:pointer;font-size:0.85rem;font-weight:500;">Save</button>
+        </div>
+        <div id="settings-msg" style="margin-top:12px;font-size:0.85rem;display:none;"></div>
+    </div>
+</div>
+<script>
+async function saveApiKey() {
+    const provider = document.getElementById('settings-provider').value;
+    const apiKey = document.getElementById('settings-apikey').value;
+    const msg = document.getElementById('settings-msg');
+    try {
+        const resp = await fetch('/api/auth/apikey', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({provider: provider, api_key: apiKey})
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            msg.style.display = 'block';
+            msg.style.color = '#16a34a';
+            msg.textContent = 'Saved successfully!';
+            setTimeout(() => { document.getElementById('settings-modal').style.display = 'none'; msg.style.display = 'none'; }, 1200);
+        } else {
+            msg.style.display = 'block';
+            msg.style.color = '#dc2626';
+            msg.textContent = data.detail || 'Failed to save';
+        }
+    } catch(e) {
+        msg.style.display = 'block';
+        msg.style.color = '#dc2626';
+        msg.textContent = 'Network error';
+    }
+}
+async function clearApiKey() {
+    document.getElementById('settings-provider').value = '';
+    document.getElementById('settings-apikey').value = '';
+    await saveApiKey();
+}
+</script>
