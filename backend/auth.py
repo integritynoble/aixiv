@@ -55,8 +55,10 @@ async def exchange_sso_token(sso_token: str) -> dict | None:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
                 SSO_VALIDATE_URL,
-                json={"token": sso_token},
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {sso_token}",
+                    "Content-Type": "application/json",
+                },
             )
             if resp.status_code == 200:
                 data = resp.json()

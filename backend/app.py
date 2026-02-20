@@ -50,11 +50,14 @@ async def login_page(request: Request, error: str = ""):
 
 
 @app.get("/sso/callback")
-async def sso_callback(token: str = ""):
-    if not token:
+async def sso_callback(request: Request, token: str = "", code: str = "", sso_token: str = ""):
+    # Accept token under any of the common SSO parameter names
+    tok = token or code or sso_token
+    if not tok:
+        logger.warning(f"SSO callback: no token. params={dict(request.query_params)}")
         return RedirectResponse("/login?error=No+token+received")
 
-    user_info = await exchange_sso_token(token)
+    user_info = await exchange_sso_token(tok)
     if not user_info or not user_info.get("user_id"):
         return RedirectResponse("/login?error=SSO+validation+failed")
 
@@ -66,7 +69,7 @@ async def sso_callback(token: str = ""):
         conn.execute("""
             UPDATE users SET user_name=?, sso_token=?, api_key=?, credit=?, token=?, updated_at=?
             WHERE user_id=?
-        """, (user_info["user_name"], token, user_info["api_key"],
+        """, (user_info["user_name"], tok, user_info["api_key"],
               user_info["credit"], user_info["token"], now, user_info["user_id"]))
     else:
         conn.execute("""
@@ -74,7 +77,7 @@ async def sso_callback(token: str = ""):
                               custom_api_key, custom_api_provider, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, ?)
         """, (user_info["user_id"], user_info["user_name"], user_info.get("role", "user"),
-              user_info["credit"], user_info["token"], token,
+              user_info["credit"], user_info["token"], tok,
               user_info["api_key"], now, now))
     conn.commit()
     conn.close()
@@ -1759,8 +1762,8 @@ async def local_register(request: Request):
     email = (data.get("email") or "").strip()
     password = data.get("password", "")
 
-    if not username or not email or not password:
-        raise HTTPException(400, "username, email, and password are required")
+    if not username or not password:
+        raise HTTPException(400, "username and password are required")
     if len(password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters")
 
@@ -1787,7 +1790,7 @@ async def local_register(request: Request):
     conn.close()
 
     jwt_token = create_jwt(user_id, username, "user")
-    response = JSONResponse({"user_id": user_id, "user_name": username, "status": "registered"})
+    response = JSONResponse({"user_id": user_id, "user_name": username, "status": "registered", "redirect": "/dashboard"})
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response
@@ -1817,7 +1820,7 @@ async def local_login(request: Request):
         raise HTTPException(401, "Invalid username or password")
 
     jwt_token = create_jwt(user["user_id"], user["user_name"], user["role"])
-    response = JSONResponse({"user_id": user["user_id"], "user_name": user["user_name"]})
+    response = JSONResponse({"user_id": user["user_id"], "user_name": user["user_name"], "redirect": "/dashboard"})
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response
