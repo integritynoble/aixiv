@@ -18,7 +18,9 @@ JWT_EXPIRY = 60 * 60 * 24 * 7  # 7 days
 
 SSO_REDIRECT_URL = "https://comparegpt.io/sso-redirect"
 SSO_VALIDATE_URL = "https://auth.comparegpt.io/sso/validate"
-SSO_CALLBACK_URL = os.environ.get("SSO_CALLBACK_URL", "https://aixiv.platformai.org/sso/callback")
+# cias.comparegpt.io is whitelisted with CompareGPT SSO; our nginx routes its
+# /sso/callback to this FastAPI, which then hands off to aixiv.platformai.org
+SSO_CALLBACK_URL = os.environ.get("SSO_CALLBACK_URL", "https://cias.comparegpt.io/sso/callback")
 
 
 def create_jwt(user_id: str, user_name: str = "", role: str = "user") -> str:
@@ -61,14 +63,18 @@ async def exchange_sso_token(sso_token: str) -> dict | None:
                 },
             )
             if resp.status_code == 200:
-                data = resp.json()
+                body = resp.json()
+                # CompareGPT returns { data: { user_info: {...}, api_key: ..., balance: {...} } }
+                data = body.get("data") or body
+                user_info = data.get("user_info") or data
+                balance = data.get("balance") or {}
                 return {
-                    "user_id": data.get("user_id", data.get("id", "")),
-                    "user_name": data.get("user_name", data.get("name", data.get("email", ""))),
+                    "user_id": str(user_info.get("user_id", user_info.get("id", ""))),
+                    "user_name": user_info.get("user_name", user_info.get("name", user_info.get("email", ""))),
                     "api_key": data.get("api_key", ""),
-                    "credit": data.get("credit", 0),
-                    "token": data.get("token", 0),
-                    "role": data.get("role", "user"),
+                    "credit": balance.get("credit", data.get("credit", 0)),
+                    "token": balance.get("token", data.get("token", 0)),
+                    "role": user_info.get("role", "user"),
                 }
             else:
                 logger.error(f"SSO validate failed: {resp.status_code} {resp.text}")

@@ -55,11 +55,11 @@ async def sso_callback(request: Request, access_token: str = "", token: str = ""
     tok = access_token or token or code or sso_token
     if not tok:
         logger.warning(f"SSO callback: no token. params={dict(request.query_params)}")
-        return RedirectResponse("/login?error=No+token+received")
+        return RedirectResponse("https://aixiv.platformai.org/login?error=No+token+received")
 
     user_info = await exchange_sso_token(tok)
     if not user_info or not user_info.get("user_id"):
-        return RedirectResponse("/login?error=SSO+validation+failed")
+        return RedirectResponse("https://aixiv.platformai.org/login?error=SSO+validation+failed")
 
     now = datetime.utcnow().isoformat()
     conn = get_db()
@@ -79,12 +79,48 @@ async def sso_callback(request: Request, access_token: str = "", token: str = ""
         """, (user_info["user_id"], user_info["user_name"], user_info.get("role", "user"),
               user_info["credit"], user_info["token"], tok,
               user_info["api_key"], now, now))
+
+    # Store a one-time auth code so we can set the cookie on aixiv.platformai.org
+    import uuid as _uuid
+    auth_code = _uuid.uuid4().hex
+    expires_at = datetime.utcfromtimestamp(
+        datetime.utcnow().timestamp() + 300  # 5 minutes
+    ).isoformat()
+    conn.execute("""
+        INSERT OR REPLACE INTO sso_codes
+            (code, user_id, user_name, role, api_key, credit, token, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (auth_code, user_info["user_id"], user_info["user_name"],
+          user_info.get("role", "user"), user_info["api_key"],
+          user_info["credit"], user_info["token"], expires_at))
     conn.commit()
     conn.close()
 
-    jwt_token = create_jwt(user_info["user_id"], user_info["user_name"],
-                           user_info.get("role", "user"))
-    response = RedirectResponse("/scientist")
+    # Redirect to aixiv.platformai.org which will exchange the code for a cookie
+    return RedirectResponse(f"https://aixiv.platformai.org/sso/finalize?code={auth_code}")
+
+
+@app.get("/sso/finalize")
+async def sso_finalize(code: str = ""):
+    """Exchange a one-time SSO code for a JWT cookie on aixiv.platformai.org."""
+    if not code:
+        return RedirectResponse("/login?error=Missing+auth+code")
+
+    now = datetime.utcnow().isoformat()
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM sso_codes WHERE code = ? AND expires_at > ?", (code, now)
+    ).fetchone()
+    if not row:
+        conn.close()
+        return RedirectResponse("/login?error=Auth+code+expired+or+invalid")
+
+    conn.execute("DELETE FROM sso_codes WHERE code = ?", (code,))
+    conn.commit()
+    conn.close()
+
+    jwt_token = create_jwt(row["user_id"], row["user_name"], row["role"])
+    response = RedirectResponse("/scientist", status_code=302)
     response.set_cookie("aixiv_token", jwt_token, httponly=True, samesite="lax",
                         max_age=60*60*24*7, path="/")
     return response

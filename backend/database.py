@@ -186,6 +186,17 @@ def init_db():
         created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_targeting_paper ON targeting_assessments(paper_id);
+
+    CREATE TABLE IF NOT EXISTS sso_codes (
+        code TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        role TEXT DEFAULT 'user',
+        api_key TEXT DEFAULT '',
+        credit INTEGER DEFAULT 0,
+        token INTEGER DEFAULT 0,
+        expires_at TEXT NOT NULL
+    );
     """)
     conn.commit()
     conn.close()
