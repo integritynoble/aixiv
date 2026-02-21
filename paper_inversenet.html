@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InverseNet: A CASP-Inspired Benchmark for Operator Mismatch in Compressive Imaging - aiXiv</title>
+<title>InverseNet: Benchmarking Operator Mismatch and Calibration Across Compressive Imaging Modalities - aiXiv</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,7 +23,7 @@
   <div class="paper-detail-wrapper">
     <div class="paper-detail">
       <div class="paper-id">aiXiv:2502.003</div>
-      <h1 class="paper-title">InverseNet: A CASP-Inspired Benchmark for Operator Mismatch in Compressive Imaging</h1>
+      <h1 class="paper-title">InverseNet: Benchmarking Operator Mismatch and Calibration Across Compressive Imaging Modalities</h1>
       <div class="paper-authors">Chengshuai Yang</div>
       <div class="affiliation">NextGen PlatformAI C Corp (integrityyang@gmail.com)</div>
       <div class="paper-meta">
@@ -33,10 +33,11 @@
       <div class="detail-meta">
         <div><dt>Submitted</dt><dd>February 2026</dd></div>
         <div><dt>Paper ID</dt><dd>aiXiv:2502.003</dd></div>
+        <div><dt>Target</dt><dd>ECCV</dd></div>
       </div>
       <div class="abstract-label">Abstract</div>
-      <p class="abstract-text">Compressive imaging faces a critical sim-to-real crisis: models trained on idealized forward operators fail catastrophically when deployed on real hardware. Operator mismatch -- the gap between assumed and true forward operators -- degrades deep learning reconstruction by 10-21 dB, yet no existing benchmark measures this effect. We introduce InverseNet, the first cross-modality benchmark for operator mismatch in compressive imaging, spanning coded aperture snapshot spectral imaging (CASSI), coded aperture compressive temporal imaging (CACTI), and single-pixel camera (SPC). InverseNet evaluates 11 reconstruction methods under a standardized three-scenario protocol -- ideal (I), mismatched (II), and oracle-corrected (III) -- across 27 test scenes and over 240 experiments. We discover an inverse performance-robustness relationship: methods achieving the highest ideal PSNR suffer the largest mismatch degradation -- confirming that a mediocre algorithm with a correct forward model outperforms a state-of-the-art network with a wrong one. On CACTI, state-of-the-art EfficientSCI loses 20.58 dB under mismatch, while classical GAP-TV recovers 93% of its own mismatch loss through oracle calibration. We further establish a mask-awareness taxonomy -- mask-oblivious architectures show zero calibration benefit, while mask-conditioned methods recover 41-90% of mismatch losses depending on mismatch type. By providing a standardized, reproducible evaluation of operator mismatch across modalities, InverseNet aims to catalyze an "AlphaFold moment" for computational imaging.</p>
-      <div class="keywords"><strong>Keywords:</strong> Compressive imaging, Operator mismatch, Calibration, Benchmark, CASSI, CACTI, Single-pixel camera</div>
+      <p class="abstract-text">State-of-the-art EfficientSCI loses 20.58 dB -- from 35.39 to 14.81 dB -- when its assumed forward operator deviates from the physical truth by just eight parameters. This operator mismatch is the default condition of every deployed compressive imaging system, yet no existing benchmark quantifies it. We introduce InverseNet, the first cross-modality benchmark for operator mismatch in compressive imaging, spanning coded aperture snapshot spectral imaging (CASSI), coded aperture compressive temporal imaging (CACTI), and single-pixel camera (SPC). InverseNet evaluates 12 reconstruction methods under a four-scenario protocol -- ideal (I), mismatched (II), oracle-corrected (III), and blind grid-search calibration (IV) -- across 27 simulated scenes and 9 real hardware captures, totalling over 360 experiments. We discover an inverse performance-robustness relationship: methods achieving the highest ideal PSNR suffer the largest mismatch degradation -- confirming that a mediocre algorithm with a correct forward model outperforms a state-of-the-art network with a wrong one. We further establish an operator-awareness taxonomy: mask-oblivious architectures show zero calibration benefit, while operator-conditioned methods recover 41-90% of mismatch losses. Scenario IV provides a practical calibration baseline via self-supervised objectives, recovering 85-100% of the oracle bound without ground truth. Real hardware experiments on 5 CASSI scenes and 4 CACTI scenes confirm that simulation-derived patterns hold on physical data.</p>
+      <div class="keywords"><strong>Keywords:</strong> Compressive imaging, Operator mismatch, Calibration, Benchmark, Spectral imaging, Video compressive sensing, Single-pixel camera</div>
       <a href="index.html" class="back-link">&larr; Back to all papers</a>
     </div>
     <aside class="access-sidebar">
@@ -54,6 +55,10 @@
           <a href="tex_source/inversenet.tar.gz">
             <span class="access-icon access-icon-tex">TeX</span>
             <span class="access-text">TeX Source</span>
+          </a>
+          <a href="papers/inversenet_supplementary.pdf" target="_blank">
+            <span class="access-icon access-icon-pdf">PDF</span>
+            <span class="access-text">Supplementary</span>
           </a>
         </div>
         <div class="access-panel-extra">

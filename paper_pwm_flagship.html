@@ -24,8 +24,8 @@
     <div class="paper-detail">
       <div class="paper-id">aiXiv:2502.001</div>
       <h1 class="paper-title">Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch</h1>
-      <div class="paper-authors">Chengshuai Yang</div>
-      <div class="affiliation">NextGen PlatformAI C Corp (integrityyang@gmail.com)</div>
+      <div class="paper-authors">Chengshuai Yang, Xin Yuan</div>
+      <div class="affiliation">NextGen PlatformAI C Corp, USA; School of Engineering, Westlake University, China</div>
       <div class="paper-meta">
         <span class="category cat-physics">physics.comp-img</span>
         <span class="category cat-cs">cs.CV</span>
@@ -33,9 +33,10 @@
       <div class="detail-meta">
         <div><dt>Submitted</dt><dd>February 2026</dd></div>
         <div><dt>Paper ID</dt><dd>aiXiv:2502.001</dd></div>
+        <div><dt>Target</dt><dd>Nature / Nature Machine Intelligence</dd></div>
       </div>
       <div class="abstract-label">Abstract</div>
-      <p class="abstract-text">Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework grounded in the Triad Law: every imaging failure decomposes into exactly three root causes -- recoverability loss (Gate 1), carrier-noise budget violation (Gate 2), and operator mismatch (Gate 3). PWM compiles 64 modalities spanning five physical carriers (photons, electrons, spins, acoustic waves, and particles) into a unified OperatorGraph intermediate representation comprising 89 validated operator templates. Autonomous, deterministic agents diagnose the dominant failure gate and correct the forward model without retraining any reconstruction algorithm. Across 7 distinct modalities (9 correction configurations, including two CASSI algorithms and the Matrix baseline; 16 registered), correction yields improvements ranging from +0.54 dB to +48.25 dB. Gate 3 is identified as the dominant bottleneck in every validated modality, demonstrating that a decade of solver-centric progress has overlooked the principal source of imaging failure. The Triad Law provides the first universal, quantitative language for imaging diagnosis.</p>
+      <p class="abstract-text">Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework where imaging failures stem from three root causes: information deficiency in measurements (Gate 1), insufficient signal-to-noise ratio (Gate 2), or mismatch between assumed and true forward operators (Gate 3). PWM uses an OperatorGraph intermediate representation to encode forward models across diverse imaging modalities into a directed acyclic graph, compiling 64 modalities spanning five physical carriers (photons, electrons, spins, acoustic waves, and particles). Autonomous, deterministic agents diagnose the dominant failure gate and correct the forward model without retraining any reconstruction algorithm. Testing across seven modalities (CASSI, CACTI, SPC, lensless, ptychography, MRI, CT) demonstrates recovery of +0.76 to +48.25 dB of degradation, with a median improvement of +14.5 dB across 26 validated modalities. Correcting the forward model yields larger gains than upgrading the solver -- establishing that a decade of solver-centric progress has overlooked the principal source of imaging failure.</p>
       <div class="keywords"><strong>Keywords:</strong> Computational imaging, Physics world models, Operator mismatch, Forward model calibration, Triad Law</div>
       <a href="index.html" class="back-link">&larr; Back to all papers</a>
     </div>
@@ -54,6 +55,10 @@
           <a href="tex_source/pwm_flagship.tar.gz">
             <span class="access-icon access-icon-tex">TeX</span>
             <span class="access-text">TeX Source</span>
+          </a>
+          <a href="papers/pwm_flagship_supplementary.pdf" target="_blank">
+            <span class="access-icon access-icon-pdf">PDF</span>
+            <span class="access-text">Supplementary</span>
           </a>
         </div>
         <div class="access-panel-extra">

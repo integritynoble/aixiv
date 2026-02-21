@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>An Open, Reproducible CT Quality-Control Platform with Versioned CasePacks and Immutable Baselines - aiXiv</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="index.html">Papers</a>
+      <a href="submit.html">Submit</a>
+      <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">Physics_World_Model</a>
+      <a href="/profile">Profile</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="paper-detail-wrapper">
+    <div class="paper-detail">
+      <div class="paper-id">aiXiv:2502.006</div>
+      <h1 class="paper-title">An Open, Reproducible CT Quality-Control Platform with Versioned CasePacks and Immutable Baselines</h1>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="affiliation">NextGen PlatformAI C Corp</div>
+      <div class="paper-meta">
+        <span class="category cat-physics">physics.med-ph</span>
+        <span class="category cat-cs">cs.SE</span>
+      </div>
+      <div class="detail-meta">
+        <div><dt>Submitted</dt><dd>February 2026</dd></div>
+        <div><dt>Paper ID</dt><dd>aiXiv:2502.006</dd></div>
+      </div>
+      <div class="abstract-label">Abstract</div>
+      <p class="abstract-text">We introduce the Physics World Model CT Quality-Control Platform, an open-source, reproducible software framework for automated CT quality assurance. The platform makes three main contributions: (1) CasePacks -- versioned, declarative workflow descriptors that encode phantom type, metric definitions, tolerance thresholds, and analysis parameters into portable YAML bundles; (2) a four-layer threshold system providing graded pass/marginal/warning/fail classifications aligned with ACR, AAPM TG-233, and site-specific requirements; and (3) immutable CommissioningBundles with cryptographic signing that establish tamper-evident reference baselines for each scanner-protocol pair. The platform validates nine ACR-aligned metrics (CT number accuracy, uniformity, noise, CNR, geometric accuracy, slice thickness, low-contrast detectability, spatial resolution, and artifact assessment) on phantom data with zero inter-run variance and sub-second computation per metric. Statistical process control is implemented via Shewhart charts with Western Electric rules for longitudinal trending. The architecture is extensible to PET/CT and SPECT/CT quality assurance through creation of modality-specific CasePacks, and supports multi-site fleet management through centralized dashboards with per-scanner drill-down.</p>
+      <div class="keywords"><strong>Keywords:</strong> CT quality control, Medical physics, Reproducibility, Statistical process control, Open-source, CasePacks, Phantom analysis</div>
+      <a href="index.html" class="back-link">&larr; Back to all papers</a>
+    </div>
+    <aside class="access-sidebar">
+      <div class="access-panel">
+        <div class="access-panel-label">Access Paper:</div>
+        <div class="access-panel-links">
+          <a href="papers/ct_qc_platform.pdf" target="_blank">
+            <span class="access-icon access-icon-pdf">PDF</span>
+            <span class="access-text">View PDF</span>
+          </a>
+          <a href="tex_source/ct_qc_platform.tar.gz">
+            <span class="access-icon access-icon-tex">TeX</span>
+            <span class="access-text">TeX Source</span>
+          </a>
+        </div>
+        <div class="access-panel-extra">
+          <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">Source Code</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>

@@ -24,14 +24,14 @@
 <main>
   <section class="hero">
     <h1>aiXiv: Open Research Archive</h1>
-    <p class="subtitle">A free distribution service for scientific research papers</p>
+    <p class="subtitle">Physics World Model for Imaging System Autonomy -- self-specifying, self-diagnosing, self-correcting</p>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search papers by title, author, or keyword..." onkeyup="filterPapers()">
     </div>
     <div class="stats">
-      <span><strong>4</strong> papers</span>
-      <span><strong>1</strong> author</span>
-      <span><strong>3</strong> categories</span>
+      <span><strong>6</strong> papers</span>
+      <span><strong>2</strong> authors</span>
+      <span><strong>4</strong> categories</span>
     </div>
   </section>
 
@@ -43,14 +43,14 @@
       <h2 class="paper-title">
         <a href="paper_pwm_flagship.html">Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch</a>
       </h2>
-      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="paper-authors">Chengshuai Yang, Xin Yuan</div>
       <div class="paper-meta">
         <span class="category cat-physics">physics.comp-img</span>
         <span class="category cat-cs">cs.CV</span>
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework grounded in the Triad Law: every imaging failure decomposes into exactly three root causes -- recoverability loss (Gate 1), carrier-noise budget violation (Gate 2), and operator mismatch (Gate 3). PWM compiles 64 modalities spanning five physical carriers into a unified OperatorGraph intermediate representation comprising 89 validated operator templates. Across 7 distinct modalities, correction yields improvements ranging from +0.54 dB to +48.25 dB.
+        Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework where imaging failures stem from three root causes: information deficiency in measurements, insufficient signal-to-noise ratio, or mismatch between assumed and true forward operators. PWM uses an OperatorGraph intermediate representation to encode forward models across 64 modalities spanning five physical carriers. Testing across seven modalities (CASSI, CACTI, SPC, lensless, ptychography, MRI, CT) demonstrates recovery of +0.76 to +48.25 dB, with median improvement of +14.5 dB across 26 validated modalities. Correcting the forward model yields larger gains than upgrading the solver.
       </p>
       <div class="paper-access">
         <a href="papers/pwm_flagship.pdf" target="_blank">View PDF</a>
@@ -78,7 +78,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        The computational imaging community has built increasingly powerful reconstruction algorithms, yet real-world deployments routinely fail. We show that a 5-parameter sub-pixel operator mismatch degrades the state-of-the-art CASSI transformer (MST-L) by 13.98 dB, erasing years of algorithmic progress. This paper presents the Physics World Model (PWM) as the "rail" for computational imaging -- a standardized evaluation harness comprising: OperatorGraph IR spanning 64 modalities, a 4-scenario evaluation protocol, the Leaderboard for Imaging Physics (LIP-Arena), and a Red Team adversarial verification module.
+        The computational imaging community has built increasingly powerful reconstruction algorithms, yet real-world deployments routinely fail. We show that a 5-parameter sub-pixel operator mismatch -- well within manufacturing tolerances -- degrades the state-of-the-art CASSI transformer (MST-L) by 13.98 dB, erasing years of algorithmic progress. This paper presents the Physics World Model (PWM) as the "rail" for computational imaging -- a standardized evaluation harness comprising: (i) OperatorGraph IR spanning 64 modalities across 5 physical carriers with 89 validated templates; (ii) a 4-scenario evaluation protocol separating solver quality from operator fidelity; (iii) the Leaderboard for Imaging Physics (LIP-Arena), a prospective competition eliminating benchmark overfitting; and (iv) a Red Team adversarial verification module. Operator correction improves reconstruction by +0.54 to +48.25 dB across 9 configurations spanning 7 modalities.
       </p>
       <div class="paper-access">
         <a href="papers/rail.pdf" target="_blank">View PDF</a>
@@ -97,7 +97,7 @@
     <article class="paper-card" data-id="aixiv.2502.003">
       <div class="paper-id">aiXiv:2502.003</div>
       <h2 class="paper-title">
-        <a href="paper_inversenet.html">InverseNet: A CASP-Inspired Benchmark for Operator Mismatch in Compressive Imaging</a>
+        <a href="paper_inversenet.html">InverseNet: Benchmarking Operator Mismatch and Calibration Across Compressive Imaging Modalities</a>
       </h2>
       <div class="paper-authors">Chengshuai Yang</div>
       <div class="paper-meta">
@@ -106,7 +106,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        Compressive imaging faces a critical sim-to-real crisis: models trained on idealized forward operators fail catastrophically when deployed on real hardware. Operator mismatch degrades deep learning reconstruction by 10-21 dB, yet no existing benchmark measures this effect. We introduce InverseNet, the first cross-modality benchmark for operator mismatch in compressive imaging, spanning CASSI, CACTI, and single-pixel camera. InverseNet evaluates 11 reconstruction methods under a standardized three-scenario protocol across 27 test scenes and over 240 experiments.
+        State-of-the-art EfficientSCI loses 20.58 dB when its assumed forward operator deviates from the physical truth by just eight parameters. This operator mismatch is the default condition of every deployed compressive imaging system, yet no existing benchmark quantifies it. We introduce InverseNet, the first cross-modality benchmark for operator mismatch in compressive imaging, spanning CASSI, CACTI, and single-pixel camera (SPC). InverseNet evaluates 12 reconstruction methods under a four-scenario protocol across 27 simulated scenes and 9 real hardware captures, totalling over 360 experiments. A mediocre algorithm with a correct forward model outperforms a state-of-the-art network with a wrong one.
       </p>
       <div class="paper-access">
         <a href="papers/inversenet.pdf" target="_blank">View PDF</a>
@@ -134,7 +134,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        Coded aperture snapshot spectral imaging (CASSI) captures a 3D hyperspectral cube from a single 2D measurement using a coded mask and spectral dispersion. Deep learning reconstructors such as MST achieve state-of-the-art quality (>34 dB) but assume perfect knowledge of the forward operator. We propose a two-stage differentiable calibration pipeline: coarse hierarchical grid search scored by GPU-accelerated GAP-TV, followed by joint gradient refinement through an unrolled differentiable forward operator using a Straight-Through Estimator (STE) for integer dispersion offsets.
+        Forward model mismatch -- sub-pixel mask misalignment and dispersion drift between the coded aperture and detector -- is unavoidable in deployed CASSI systems, yet even moderate perturbations degrade state-of-the-art mask-guided transformers (MST) by over 16 dB. We present a self-supervised two-stage differentiable calibration pipeline that recovers 5-parameter mismatch from a single measurement and nominal mask alone, requiring no ground truth. Stage 1 performs a coarse hierarchical grid search scored by GPU-accelerated GAP-TV; Stage 2 applies gradient refinement through an unrolled differentiable forward operator using a Straight-Through Estimator (STE) for integer dispersion offsets. Evaluating five reconstruction methods across four scenarios on 10 KAIST scenes, the work uncovers a mask-sensitivity spectrum: mask-guided transformers suffer catastrophic degradation yet recover ~48% of the oracle gap after calibration.
       </p>
       <div class="paper-access">
         <a href="papers/pwmi_cassi.pdf" target="_blank">View PDF</a>
@@ -145,6 +145,58 @@
       </div>
       <div class="paper-actions">
         <a href="paper_pwmi_cassi.html" class="btn btn-abstract">Abstract</a>
+        <a href="https://github.com/integritynoble/Physics_World_Model" class="btn btn-code" target="_blank">Code</a>
+      </div>
+    </article>
+
+    <!-- Paper 5: CT QC Copilot -->
+    <article class="paper-card" data-id="aixiv.2502.005">
+      <div class="paper-id">aiXiv:2502.005</div>
+      <h2 class="paper-title">
+        <a href="paper_ct_qc_copilot.html">CT QC Copilot: Clinical Implementation of an Automated Quality-Control Decision-Support System</a>
+      </h2>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="paper-meta">
+        <span class="category cat-physics">physics.med-ph</span>
+        <span class="category cat-cs">cs.AI</span>
+        <span class="date">Submitted February 2026</span>
+      </div>
+      <p class="paper-abstract">
+        We describe the clinical implementation of an automated decision-support system for CT quality control. Per-scanner analysis time is reduced from ~67 minutes (manual) to 4.2 minutes (automated + review) -- a 94% decrease. Western Electric SPC rules identify degradation 3-6 months before threshold exceedance in 4 of 30 simulated scanners. Metric agreement is within 1.2 HU for CT number and 0.10 mm for geometric measurements vs. manufacturer values.
+      </p>
+      <div class="paper-access">
+        <a href="papers/ct_qc_copilot.pdf" target="_blank">View PDF</a>
+        <span class="access-sep">|</span>
+        <a href="tex_source/ct_qc_copilot.tar.gz">TeX Source</a>
+      </div>
+      <div class="paper-actions">
+        <a href="paper_ct_qc_copilot.html" class="btn btn-abstract">Abstract</a>
+        <a href="https://github.com/integritynoble/Physics_World_Model" class="btn btn-code" target="_blank">Code</a>
+      </div>
+    </article>
+
+    <!-- Paper 6: CT QC Platform -->
+    <article class="paper-card" data-id="aixiv.2502.006">
+      <div class="paper-id">aiXiv:2502.006</div>
+      <h2 class="paper-title">
+        <a href="paper_ct_qc_platform.html">An Open, Reproducible CT Quality-Control Platform with Versioned CasePacks and Immutable Baselines</a>
+      </h2>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="paper-meta">
+        <span class="category cat-physics">physics.med-ph</span>
+        <span class="category cat-cs">cs.SE</span>
+        <span class="date">Submitted February 2026</span>
+      </div>
+      <p class="paper-abstract">
+        We introduce the Physics World Model CT Quality-Control Platform, an open-source, reproducible software framework for automated CT quality assurance. Three main contributions: (1) CasePacks -- versioned workflow descriptors, (2) a four-layer threshold system, and (3) immutable CommissioningBundles with cryptographic signing. Validates nine ACR-aligned metrics on phantom data with zero inter-run variance and sub-second computation. Implements statistical process control via Shewhart charts. Extensible to PET/CT and SPECT/CT via new CasePacks.
+      </p>
+      <div class="paper-access">
+        <a href="papers/ct_qc_platform.pdf" target="_blank">View PDF</a>
+        <span class="access-sep">|</span>
+        <a href="tex_source/ct_qc_platform.tar.gz">TeX Source</a>
+      </div>
+      <div class="paper-actions">
+        <a href="paper_ct_qc_platform.html" class="btn btn-abstract">Abstract</a>
         <a href="https://github.com/integritynoble/Physics_World_Model" class="btn btn-code" target="_blank">Code</a>
       </div>
     </article>

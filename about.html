@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About - aiXiv</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+.pillar-card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; background: #fafafa; }
+.pillar-card h3 { margin-top: 0; }
+.pillar-card .pillar-label { display: inline-block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 4px; margin-bottom: 0.5rem; }
+.pillar-rail .pillar-label { background: #e3f2fd; color: #1565c0; }
+.pillar-train .pillar-label { background: #f3e5f5; color: #6a1b9a; }
+.pillar-benchmark .pillar-label { background: #e8f5e9; color: #2e7d32; }
+.pillar-card .pillar-venue { font-size: 0.85rem; color: #666; margin-top: 0.75rem; font-style: italic; }
+.carrier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.carrier-item { padding: 1rem; background: #f5f5f5; border-radius: 6px; border-left: 3px solid #1565c0; }
+.carrier-item strong { display: block; margin-bottom: 0.25rem; }
+.carrier-item small { color: #666; }
+</style>
 </head>
 <body>
 <header>
@@ -26,14 +40,81 @@
     <h2>What is aiXiv?</h2>
     <p>aiXiv is an open-access archive and distribution service for scientific research papers. Our platform provides free, unrestricted access to scholarly articles with a particular focus on computational imaging, physics world models, and related disciplines at the intersection of physics and computer science.</p>
 
-    <h2>Our Mission</h2>
-    <p>We believe that scientific knowledge should be freely accessible to everyone. aiXiv serves as a platform for researchers to share their work with the global scientific community, accelerating the pace of discovery and collaboration. All papers hosted on aiXiv are available at no cost to readers.</p>
+    <h2>Physics World Model (PWM) -- Toward Imaging System Autonomy</h2>
+    <p>PWM is the evaluation harness and current best methods for computational imaging -- an open, reproducible toolkit that aims to make any imaging system <strong>self-specifying</strong>, <strong>self-diagnosing</strong>, and <strong>self-correcting</strong>.</p>
+    <p>The computational imaging community has built increasingly powerful reconstruction algorithms, yet deployed systems routinely fail because the assumed forward model diverges from real physics. PWM provides a universal diagnostic and correction framework grounded in the <strong>Triad Law</strong>: every imaging failure decomposes into exactly three root causes -- recoverability loss, carrier-noise budget violation, and operator mismatch.</p>
+
+    <h3>Three Pillars</h3>
+    <div class="pillars">
+      <div class="pillar-card pillar-rail">
+        <span class="pillar-label">The Rail</span>
+        <h3>Standardized Infrastructure</h3>
+        <p>The Rail provides the standardized evaluation harness for computational imaging: OperatorGraph IR spanning 64 modalities across 5 physical carriers with 89 validated templates, a 4-scenario evaluation protocol, the Leaderboard for Imaging Physics (LIP-Arena), and a Red Team adversarial verification module.</p>
+        <p><a href="paper_rail.html">Read the Rail paper &rarr;</a></p>
+        <div class="pillar-venue">We are building the rail for computational imaging now.</div>
+      </div>
+      <div class="pillar-card pillar-train">
+        <span class="pillar-label">The Train</span>
+        <h3>Universal Diagnostic Theory</h3>
+        <p>The PWM Flagship proposes the method to build the train: the Triad Law and autonomous deterministic agents that diagnose the dominant failure gate and correct forward models without retraining any reconstruction algorithm. Testing across seven modalities (CASSI, CACTI, SPC, lensless, ptychography, MRI, CT) demonstrates recovery of +0.76 to +48.25 dB, with median improvement of +14.5 dB across 26 validated modalities.</p>
+        <p><a href="paper_pwm_flagship.html">Read the PWM Flagship paper &rarr;</a></p>
+        <div class="pillar-venue">Targeting Nature / Nature Machine Intelligence</div>
+      </div>
+      <div class="pillar-card pillar-benchmark">
+        <span class="pillar-label">The Benchmark</span>
+        <h3>CASP for Computational Imaging</h3>
+        <p>InverseNet is the first cross-modality benchmark for operator mismatch -- inspired by CASP for protein structure prediction (AlphaFold). It evaluates 12 reconstruction methods under a four-scenario protocol across 27 simulated scenes and 9 real hardware captures, totalling over 360 experiments, aiming to catalyze an "AlphaFold moment" for computational imaging.</p>
+        <p><a href="paper_inversenet.html">Read the InverseNet paper &rarr;</a></p>
+        <div class="pillar-venue">Community benchmark challenge</div>
+      </div>
+    </div>
+
+    <h2>Applications in Medical &amp; Nuclear Physics</h2>
+    <p>PWM's carrier-based framework naturally extends beyond optical imaging to diagnostic and nuclear medical physics. We are actively developing clinical applications, including two CT quality-control papers:</p>
+    <ul>
+      <li><a href="paper_ct_qc_copilot.html">CT QC Copilot</a> -- Automated decision-support system reducing per-scanner QC time by 94%</li>
+      <li><a href="paper_ct_qc_platform.html">CT QC Platform</a> -- Open, reproducible framework with versioned CasePacks, extensible to PET/CT and SPECT/CT</li>
+    </ul>
+    <p>The five physical carriers in PWM cover the full spectrum of clinical imaging modalities:</p>
+    <div class="carrier-grid">
+      <div class="carrier-item">
+        <strong>Photons</strong>
+        <small>CT (X-ray), fluorescence imaging, optical coherence tomography, fundus imaging</small>
+      </div>
+      <div class="carrier-item">
+        <strong>Spins</strong>
+        <small>MRI, fMRI, magnetic resonance spectroscopy</small>
+      </div>
+      <div class="carrier-item">
+        <strong>Acoustic Waves</strong>
+        <small>Ultrasound, photoacoustic imaging, elastography</small>
+      </div>
+      <div class="carrier-item">
+        <strong>Particles</strong>
+        <small>PET, SPECT, nuclear imaging, radiation therapy planning</small>
+      </div>
+      <div class="carrier-item">
+        <strong>Electrons</strong>
+        <small>Electron microscopy, cryo-EM, scanning electron microscopy</small>
+      </div>
+    </div>
+    <p>PWM provides the same Triad Law diagnostic framework to any physics-based imaging system: the operator mismatch that causes a CASSI system to lose 16 dB is the same class of failure that causes CT reconstruction artifacts or MRI aliasing -- and the same correction framework applies.</p>
+
+    <h2>Open Collaboration</h2>
+    <p>PWM is an open-source initiative. We welcome collaborators across all imaging domains to:</p>
+    <ul>
+      <li>Validate PWM on new imaging modalities (medical, industrial, scientific)</li>
+      <li>Add modality-specific operator templates to the OperatorGraph registry</li>
+      <li>Contribute reconstruction methods to the InverseNet benchmark</li>
+      <li>Co-develop clinical imaging applications</li>
+    </ul>
+    <p>All code, data, and reproducibility manifests are available on <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">GitHub</a>.</p>
 
     <h2>Focus Areas</h2>
-    <p>While aiXiv welcomes contributions across scientific disciplines, our current focus areas include:</p>
     <ul>
       <li><strong>Computational Imaging (physics.comp-img)</strong> -- Forward models, reconstruction algorithms, operator calibration, and imaging system design across all physical modalities.</li>
       <li><strong>Physics of Optics (physics.optics)</strong> -- Optical systems, spectral imaging, coded aperture methods, and diffractive optics.</li>
+      <li><strong>Medical Physics (physics.med-ph)</strong> -- Diagnostic imaging, nuclear medicine, radiation therapy, and clinical image reconstruction.</li>
       <li><strong>Computer Vision (cs.CV)</strong> -- Image reconstruction, inverse problems, and visual computing.</li>
       <li><strong>Artificial Intelligence (cs.AI)</strong> -- Machine learning methods applied to physical systems and scientific discovery.</li>
     </ul>
@@ -49,6 +130,7 @@
 
     <h2>Operated By</h2>
     <p>aiXiv is operated by <strong>NextGen PlatformAI C Corp</strong>, dedicated to building infrastructure for open science and advancing the standardization of computational imaging research.</p>
+    <p>Contact: <a href="mailto:integrityyang@gmail.com">integrityyang@gmail.com</a></p>
 
     <a href="index.html" class="back-link">&larr; Back to all papers</a>
   </div>
