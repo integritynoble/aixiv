@@ -29,9 +29,9 @@
       <input type="text" id="searchInput" placeholder="Search papers by title, author, or keyword..." onkeyup="filterPapers()">
     </div>
     <div class="stats">
-      <span><strong>6</strong> papers</span>
+      <span><strong>7</strong> papers</span>
       <span><strong>2</strong> authors</span>
-      <span><strong>4</strong> categories</span>
+      <span><strong>5</strong> categories</span>
     </div>
   </section>
 
@@ -41,7 +41,7 @@
     <article class="paper-card" data-id="aixiv.2502.001">
       <div class="paper-id">aiXiv:2502.001</div>
       <h2 class="paper-title">
-        <a href="paper_pwm_flagship.html">Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch</a>
+        <a href="paper_pwm_flagship.html">Ten Primitives and Three Gates: The Universal Structure of Computational Imaging</a>
       </h2>
       <div class="paper-authors">Chengshuai Yang, Xin Yuan</div>
       <div class="paper-meta">
@@ -50,7 +50,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework where imaging failures stem from three root causes: information deficiency in measurements, insufficient signal-to-noise ratio, or mismatch between assumed and true forward operators. PWM uses an OperatorGraph intermediate representation to encode forward models across 64 modalities spanning five physical carriers. Testing across seven modalities (CASSI, CACTI, SPC, lensless, ptychography, MRI, CT) demonstrates recovery of +0.76 to +48.25 dB, with median improvement of +14.5 dB across 26 validated modalities. Correcting the forward model yields larger gains than upgrading the solver.
+        Computational imaging systems routinely underperform because the assumed forward model diverges from the true physics. Here we prove two results. First, the Finite Primitive Basis Theorem: every linear, shift-variant imaging forward model admits an epsilon-approximate representation as a typed directed acyclic graph over exactly 10 canonical primitives. Second, the Triad Decomposition: every reconstruction failure decomposes into three root causes -- information deficiency, carrier noise, and operator mismatch -- with mismatch dominant across all validated modalities. Across seven modalities spanning three carrier families (optical photons, X-ray photons, and nuclear spins), autonomous correction recovers +0.8 to +10.7 dB of mismatch-induced degradation without retraining the solver. Hardware validation on real instruments confirms mismatch dominance.
       </p>
       <div class="paper-access">
         <a href="papers/pwm_flagship.pdf" target="_blank">View PDF</a>
@@ -162,7 +162,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        We describe the clinical implementation of an automated decision-support system for CT quality control. Per-scanner analysis time is reduced from ~67 minutes (manual) to 4.2 minutes (automated + review) -- a 94% decrease. Western Electric SPC rules identify degradation 3-6 months before threshold exceedance in 4 of 30 simulated scanners. Metric agreement is within 1.2 HU for CT number and 0.10 mm for geometric measurements vs. manufacturer values.
+        We describe the clinical implementation of the CT QC Copilot, an automated decision-support system for computed tomography quality control embodying a "system computes, physicist decides" model. The Copilot reduced per-scanner QC analysis time from ~67 minutes (manual) to 4.2 minutes (automated + review) -- a 94% reduction making AAPM TG-233 trending-based QC practical for large clinical operations. Western Electric rule-based drift detection identified degradation 3-6 months before threshold exceedance in 4 of 30 simulated scanners. All nine ACR-aligned metrics showed agreement within 1.2 HU for CT number and 0.10 mm for geometric measurements.
       </p>
       <div class="paper-access">
         <a href="papers/ct_qc_copilot.pdf" target="_blank">View PDF</a>
@@ -188,7 +188,7 @@
         <span class="date">Submitted February 2026</span>
       </div>
       <p class="paper-abstract">
-        We introduce the Physics World Model CT Quality-Control Platform, an open-source, reproducible software framework for automated CT quality assurance. Three main contributions: (1) CasePacks -- versioned workflow descriptors, (2) a four-layer threshold system, and (3) immutable CommissioningBundles with cryptographic signing. Validates nine ACR-aligned metrics on phantom data with zero inter-run variance and sub-second computation. Implements statistical process control via Shewhart charts. Extensible to PET/CT and SPECT/CT via new CasePacks.
+        We present the Physics World Model CT Quality-Control Platform, an open-source, reproducible software framework for automated CT quality assurance. Three architectural contributions: (i) CasePacks -- versioned, phantom-type-specific workflow descriptors that decouple QA logic from scanner hardware; (ii) a four-layer threshold system codifying institutional policies without forking code; and (iii) immutable CommissioningBundles with SHA-256 signing and full audit trails. Validates nine ACR-aligned metrics with zero inter-run variance and sub-second computation. Extensible to PET/CT and SPECT/CT via new CasePacks.
       </p>
       <div class="paper-access">
         <a href="papers/ct_qc_platform.pdf" target="_blank">View PDF</a>
@@ -197,6 +197,33 @@
       </div>
       <div class="paper-actions">
         <a href="paper_ct_qc_platform.html" class="btn btn-abstract">Abstract</a>
+        <a href="https://github.com/integritynoble/Physics_World_Model" class="btn btn-code" target="_blank">Code</a>
+      </div>
+    </article>
+
+    <!-- Paper 7: Finite Primitive Theorem -->
+    <article class="paper-card" data-id="aixiv.2502.007">
+      <div class="paper-id">aiXiv:2502.007</div>
+      <h2 class="paper-title">
+        <a href="paper_finite_primitive_theorem.html">The Finite Primitive Basis Theorem for Computational Imaging: Formal Foundations of the OperatorGraph Representation</a>
+      </h2>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="paper-meta">
+        <span class="category cat-cs">cs.CV</span>
+        <span class="category cat-physics">physics.comp-img</span>
+        <span class="category cat-math">math.FA</span>
+        <span class="date">Submitted February 2026</span>
+      </div>
+      <p class="paper-abstract">
+        Computational imaging forward models are traditionally implemented as monolithic, modality-specific codes. We prove that every forward model in a broad, precisely defined operator class admits an epsilon-approximate representation as a typed directed acyclic graph (DAG) whose nodes are drawn from a library of exactly 10 canonical primitives: Propagate, Modulate, Project, Encode, Convolve, Accumulate, Detect, Sample, Disperse, and Scatter. The proof is constructive and the library is minimal: removing any single primitive causes at least one modality to lose its representation. Empirical validation on 31 imaging modalities confirms that all achieve approximation error below 0.01 with at most 5 operator nodes and depth 5.
+      </p>
+      <div class="paper-access">
+        <a href="papers/finite_primitive_theorem.pdf" target="_blank">View PDF</a>
+        <span class="access-sep">|</span>
+        <a href="tex_source/finite_primitive_theorem.tar.gz">TeX Source</a>
+      </div>
+      <div class="paper-actions">
+        <a href="paper_finite_primitive_theorem.html" class="btn btn-abstract">Abstract</a>
         <a href="https://github.com/integritynoble/Physics_World_Model" class="btn btn-code" target="_blank">Code</a>
       </div>
     </article>

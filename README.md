@@ -10,12 +10,13 @@ aiXiv is the publication platform for the [Physics World Model (PWM)](https://gi
 
 | ID | Title | Authors | Categories | Target |
 |----|-------|---------|------------|--------|
-| [2502.001](https://aixiv.platformai.org/paper_pwm_flagship.html) | Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch | Chengshuai Yang, Xin Yuan | physics.comp-img, cs.CV | Nature |
+| [2502.001](https://aixiv.platformai.org/paper_pwm_flagship.html) | Ten Primitives and Three Gates: The Universal Structure of Computational Imaging | Chengshuai Yang, Xin Yuan | physics.comp-img, cs.CV | Nature |
 | [2502.002](https://aixiv.platformai.org/paper_rail.html) | The Rail for Computational Imaging: A Physics World Model for Industrializing Image Reconstruction | Chengshuai Yang | physics.comp-img, cs.CV | -- |
 | [2502.003](https://aixiv.platformai.org/paper_inversenet.html) | InverseNet: Benchmarking Operator Mismatch and Calibration Across Compressive Imaging Modalities | Chengshuai Yang | cs.CV, physics.comp-img | ECCV |
 | [2502.004](https://aixiv.platformai.org/paper_pwmi_cassi.html) | Correcting Forward Model Mismatch in CASSI via Two-Stage Differentiable Calibration | Chengshuai Yang | cs.CV, physics.optics | ECCV |
 | [2502.005](https://aixiv.platformai.org/paper_ct_qc_copilot.html) | CT QC Copilot: Clinical Implementation of an Automated Quality-Control Decision-Support System | Chengshuai Yang | physics.med-ph, cs.AI | JACMP |
 | [2502.006](https://aixiv.platformai.org/paper_ct_qc_platform.html) | An Open, Reproducible CT Quality-Control Platform with Versioned CasePacks and Immutable Baselines | Chengshuai Yang | physics.med-ph, cs.SE | -- |
+| [2502.007](https://aixiv.platformai.org/paper_finite_primitive_theorem.html) | The Finite Primitive Basis Theorem for Computational Imaging | Chengshuai Yang | cs.CV, physics.comp-img, math.FA | IEEE TCI |
 
 ---
 
@@ -25,7 +26,7 @@ aiXiv is the publication platform for the [Physics World Model (PWM)](https://gi
 aixiv.platformai.org
 ├── Static frontend (nginx)          # Paper listings, detail pages, about
 │   ├── index.html                   # Homepage with search and paper cards
-│   ├── paper_*.html                 # Individual paper detail pages (6)
+│   ├── paper_*.html                 # Individual paper detail pages (7)
 │   ├── about.html / submit.html     # Info pages
 │   ├── papers/*.pdf                 # Paper PDFs + supplementary
 │   ├── html_papers/                 # Experimental HTML renders
@@ -110,6 +111,7 @@ Both methods issue a signed JWT cookie (`aixiv_token`) valid for 7 days.
 ├── paper_pwmi_cassi.html         # Paper detail: PWMI-CASSI
 ├── paper_ct_qc_copilot.html      # Paper detail: CT QC Copilot
 ├── paper_ct_qc_platform.html     # Paper detail: CT QC Platform
+├── paper_finite_primitive_theorem.html  # Paper detail: Finite Primitive Theorem
 ├── papers/                       # PDFs (main + supplementary)
 ├── html_papers/                  # HTML paper renders
 ├── tex_source/                   # TeX source archives

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch - aiXiv</title>
+<title>Ten Primitives and Three Gates: The Universal Structure of Computational Imaging - aiXiv</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,7 +23,7 @@
   <div class="paper-detail-wrapper">
     <div class="paper-detail">
       <div class="paper-id">aiXiv:2502.001</div>
-      <h1 class="paper-title">Physics World Models for Computational Imaging: A Universal Physics-Information Law for Recoverability, Carrier Noise, and Operator Mismatch</h1>
+      <h1 class="paper-title">Ten Primitives and Three Gates: The Universal Structure of Computational Imaging</h1>
       <div class="paper-authors">Chengshuai Yang, Xin Yuan</div>
       <div class="affiliation">NextGen PlatformAI C Corp, USA; School of Engineering, Westlake University, China</div>
       <div class="paper-meta">
@@ -36,8 +36,8 @@
         <div><dt>Target</dt><dd>Nature / Nature Machine Intelligence</dd></div>
       </div>
       <div class="abstract-label">Abstract</div>
-      <p class="abstract-text">Computational imaging systems routinely fail in practice because the assumed forward model diverges from the true physics, yet no existing framework systematically diagnoses why reconstruction degrades. We introduce Physics World Models (PWM), a universal diagnostic and correction framework where imaging failures stem from three root causes: information deficiency in measurements (Gate 1), insufficient signal-to-noise ratio (Gate 2), or mismatch between assumed and true forward operators (Gate 3). PWM uses an OperatorGraph intermediate representation to encode forward models across diverse imaging modalities into a directed acyclic graph, compiling 64 modalities spanning five physical carriers (photons, electrons, spins, acoustic waves, and particles). Autonomous, deterministic agents diagnose the dominant failure gate and correct the forward model without retraining any reconstruction algorithm. Testing across seven modalities (CASSI, CACTI, SPC, lensless, ptychography, MRI, CT) demonstrates recovery of +0.76 to +48.25 dB of degradation, with a median improvement of +14.5 dB across 26 validated modalities. Correcting the forward model yields larger gains than upgrading the solver -- establishing that a decade of solver-centric progress has overlooked the principal source of imaging failure.</p>
-      <div class="keywords"><strong>Keywords:</strong> Computational imaging, Physics world models, Operator mismatch, Forward model calibration, Triad Law</div>
+      <p class="abstract-text">Computational imaging systems routinely underperform because the assumed forward model diverges from the true physics. Here we prove two results. First, the Finite Primitive Basis Theorem: every linear, shift-variant imaging forward model admits an epsilon-approximate representation as a typed directed acyclic graph over exactly 10 canonical primitives. Second, the Triad Decomposition: every reconstruction failure decomposes into three root causes -- information deficiency, carrier noise, and operator mismatch -- with mismatch dominant across all validated modalities. Together these results yield a modality-agnostic diagnostic and correction framework. Across seven modalities spanning three carrier families (optical photons, X-ray photons, and nuclear spins), autonomous correction recovers +0.8 to +10.7 dB of mismatch-induced degradation without retraining the solver. Hardware validation on real instruments confirms mismatch dominance. A held-out closure test on 8 additional modalities confirms basis completeness with saturating growth.</p>
+      <div class="keywords"><strong>Keywords:</strong> Computational imaging, Finite Primitive Basis Theorem, Triad Decomposition, Operator mismatch, OperatorGraph, Forward model calibration</div>
       <a href="index.html" class="back-link">&larr; Back to all papers</a>
     </div>
     <aside class="access-sidebar">

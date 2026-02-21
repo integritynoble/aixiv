@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Finite Primitive Basis Theorem for Computational Imaging: Formal Foundations of the OperatorGraph Representation - aiXiv</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">ai<span class="logo-accent">X</span>iv</a>
+    <nav>
+      <a href="index.html">Papers</a>
+      <a href="submit.html">Submit</a>
+      <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">Physics_World_Model</a>
+      <a href="/profile">Profile</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="paper-detail-wrapper">
+    <div class="paper-detail">
+      <div class="paper-id">aiXiv:2502.007</div>
+      <h1 class="paper-title">The Finite Primitive Basis Theorem for Computational Imaging: Formal Foundations of the OperatorGraph Representation</h1>
+      <div class="paper-authors">Chengshuai Yang</div>
+      <div class="affiliation">NextGen PlatformAI C Corp</div>
+      <div class="paper-meta">
+        <span class="category cat-cs">cs.CV</span>
+        <span class="category cat-physics">physics.comp-img</span>
+        <span class="category cat-math">math.FA</span>
+      </div>
+      <div class="detail-meta">
+        <div><dt>Submitted</dt><dd>February 2026</dd></div>
+        <div><dt>Paper ID</dt><dd>aiXiv:2502.007</dd></div>
+        <div><dt>Target</dt><dd>IEEE Transactions on Computational Imaging</dd></div>
+      </div>
+      <div class="abstract-label">Abstract</div>
+      <p class="abstract-text">Computational imaging forward models -- from coded aperture spectral cameras to MRI scanners -- are traditionally implemented as monolithic, modality-specific codes. We prove that every forward model in a broad, precisely defined operator class C_tier (encompassing all clinical, scientific, and industrial imaging modalities at Tier-2 physical fidelity) admits an epsilon-approximate representation as a typed directed acyclic graph (DAG) whose nodes are drawn from a library of exactly 10 canonical primitives: Propagate, Modulate, Project, Encode, Convolve, Accumulate, Detect, Sample, Disperse, and Scatter. We call this the Finite Primitive Basis Theorem. The proof is constructive: we provide an algorithm that, given any H in C_tier, produces a DAG G with ||H - H_dag||/||H|| &lt;= epsilon and graph complexity within prescribed bounds. We further prove that the library is minimal: removing any single primitive causes at least one modality to lose its epsilon-approximate representation. We give formal definitions for each primitive (forward, adjoint, parameters, constraints), define typed DAG denotation semantics, and establish the approximation error bounds through five primitive realization lemmas -- one per physics-stage family. Empirical validation on 31 imaging modalities (26 previously registered plus 5 held-out) confirms that all achieve e_tier &lt; 0.01 with at most 5 operator nodes and depth 5. A formal extension protocol governs the addition of new primitives; we demonstrate it with a worked example (Compton scatter imaging leading to the Scatter primitive). These results establish the mathematical foundations for the Physics World Models (PWM) framework.</p>
+      <div class="keywords"><strong>Keywords:</strong> Computational imaging, Finite primitive basis, OperatorGraph, Directed acyclic graph, Forward model representation, Functional analysis, Operator theory</div>
+      <a href="index.html" class="back-link">&larr; Back to all papers</a>
+    </div>
+    <aside class="access-sidebar">
+      <div class="access-panel">
+        <div class="access-panel-label">Access Paper:</div>
+        <div class="access-panel-links">
+          <a href="papers/finite_primitive_theorem.pdf" target="_blank">
+            <span class="access-icon access-icon-pdf">PDF</span>
+            <span class="access-text">View PDF</span>
+          </a>
+          <a href="tex_source/finite_primitive_theorem.tar.gz">
+            <span class="access-icon access-icon-tex">TeX</span>
+            <span class="access-text">TeX Source</span>
+          </a>
+        </div>
+        <div class="access-panel-extra">
+          <a href="https://github.com/integritynoble/Physics_World_Model" target="_blank">Source Code</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer>
+  <div class="footer-inner">
+    <p>aiXiv is a free distribution service for scientific research.</p>
+    <p>Operated by NextGen PlatformAI C Corp</p>
+  </div>
+</footer>
+</body>
+</html>
